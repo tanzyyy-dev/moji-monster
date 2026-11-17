@@ -1,123 +1,138 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7eecf"><title>うかべてあそぼ</title>
-<style>
-:root{font-family:system-ui,"Hiragino Kaku Gothic ProN",sans-serif;color:#40352f;background:#f7eecf}*{box-sizing:border-box}body{margin:0;overflow:hidden}button{font:inherit;cursor:pointer;border:0;touch-action:manipulation}.app{height:100dvh;display:flex;flex-direction:column;background:linear-gradient(#bfeaf4 0%,#f2f8e9 69%,#c5e6a0 70%,#a9d67f 100%)}header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;z-index:2}.logo{font-size:clamp(21px,5vw,31px);font-weight:1000;letter-spacing:.04em;text-shadow:2px 3px #fff}.pill{background:#fff8e9;border:2px solid #5b493d;border-radius:99px;padding:9px 14px;font-weight:800;box-shadow:0 4px #c8b9a1}.world{flex:1;min-height:0;position:relative}#world{width:100%;height:100%;display:block}.bottom{display:flex;justify-content:center;gap:12px;padding:12px 16px max(18px,env(safe-area-inset-bottom));z-index:2}.primary{background:#ff7c7b;color:#3e2c30;border:3px solid #573b3b;border-radius:22px;padding:15px 28px;font-size:20px;font-weight:1000;box-shadow:0 6px #ba515b}.secondary{background:#fff9e9;border:3px solid #5b493d;border-radius:20px;padding:14px 18px;font-weight:900;box-shadow:0 5px #c9bba4}.primary:active,.secondary:active{transform:translateY(3px);box-shadow:none}.hint{position:absolute;top:15%;left:50%;transform:translateX(-50%);white-space:nowrap;background:#ffffffbd;border-radius:30px;padding:12px 18px;font-weight:800;pointer-events:none}.overlay{position:fixed;inset:0;background:#332b2b99;display:none;align-items:center;justify-content:center;padding:15px;z-index:10}.overlay.show{display:flex}.panel{width:min(100%,470px);background:#fffaf0;border:4px solid #564438;border-radius:30px;padding:17px;box-shadow:0 14px 0 #483a36;max-height:95dvh;overflow:auto}.panel h2{margin:0 0 5px;font-size:25px;text-align:center}.sub{text-align:center;font-size:13px;margin:0 0 10px}.drawbox{position:relative;background:#fff;border:3px dashed #d7cbb8;border-radius:22px;overflow:hidden;aspect-ratio:1.25}#draw{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}.guide{position:absolute;inset:0;pointer-events:none;display:grid;place-items:center;font-size:16px;color:#d3c8b6}.colors{display:flex;justify-content:center;gap:12px;margin:12px}.swatch{width:35px;height:35px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #b7a997}.swatch.selected{box-shadow:0 0 0 3px #40352f;transform:scale(1.12)}.actions{display:flex;gap:10px}.actions button{flex:1}.note{font-size:12px;color:#78695d;text-align:center;margin:11px 0 0}.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid #514236;border-radius:20px;padding:10px 16px;font-weight:800;z-index:20;pointer-events:none;opacity:0;transition:opacity .25s}.toast.show{opacity:1}@media(max-height:680px){.panel{padding:10px}.drawbox{aspect-ratio:1.7}.panel h2{font-size:21px}.colors{margin:8px}}
-.toptools{position:fixed;right:14px;top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:10px;z-index:3}.tool{width:49px;height:49px;border-radius:16px;background:#fff9e9;border:2px solid #5b493d;box-shadow:0 4px #c8b9a1;font-size:24px;font-weight:900}.bottom{padding-bottom:max(24px,env(safe-area-inset-bottom))}.bottom .primary{min-width:min(78vw,330px);font-size:22px}.bottom{padding:6px 10px max(9px,env(safe-area-inset-bottom));justify-content:center}.inline-draw{width:min(100%,460px);background:#fffaf0;border:2px solid #655448;border-radius:21px;padding:8px 10px 9px;box-shadow:0 3px 0 #b9ad94}.inline-label{text-align:center;font-weight:900;font-size:13px;line-height:18px}.inline-draw .drawbox{height:clamp(105px,20dvh,170px);aspect-ratio:auto;border-width:2px;border-radius:13px}.inline-draw .draw-controls{display:flex;align-items:center;gap:7px;margin-top:7px}.inline-draw .colors{display:flex;gap:5px;margin:0;flex:1;justify-content:flex-start}.inline-draw .swatch{width:clamp(20px,5.2vw,29px);height:clamp(20px,5.2vw,29px);border-width:2px}.inline-draw .secondary{padding:7px 11px;border-width:2px;border-radius:12px;font-size:20px;box-shadow:none}.inline-draw .primary{min-width:0;padding:9px 13px;font-size:15px;border-width:2px;border-radius:13px;box-shadow:none;white-space:nowrap}.hint{top:12%}@media(max-height:650px){.inline-draw .drawbox{height:100px}.inline-label{display:none}} .inline-draw .draw-controls{gap:9px}.inline-draw .color-cycle{width:46px;height:46px;min-width:46px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #5b493d;cursor:pointer}.inline-draw .secondary{min-height:46px;font-size:17px}.inline-draw .primary{min-height:46px;flex:1;font-size:18px;padding:8px 10px}.inline-draw .upload{font-size:14px;white-space:nowrap;padding:8px 9px}.inline-draw{padding-top:9px}.inline-draw .drawbox{height:clamp(115px,22dvh,180px)}@media(max-width:350px){.inline-draw .draw-controls{gap:6px}.inline-draw .color-cycle{width:42px;height:42px;min-width:42px}.inline-draw .upload{font-size:12px;padding:6px}.inline-draw .primary{font-size:16px}} .world{position:relative}.bomb-tool{position:absolute;right:14px;top:124px;width:49px;height:49px;z-index:4;background:#fff9e9;border:2px solid #5b493d;border-radius:16px;box-shadow:0 4px #c8b9a1;font-size:25px}.bomb-tool.active{background:#ffb66b;box-shadow:0 0 0 4px #fbe7ad,0 4px #9b6845}.inline-draw .secondary[aria-label="書き直す"]{font-size:21px}.toptools{gap:12px}.toptools .bomb-tool{position:static;width:49px;height:49px;z-index:auto}.inline-draw .secondary[aria-label="書き直す"]{display:flex;align-items:center;justify-content:center;min-width:46px;padding:7px}.inline-draw .secondary[aria-label="書き直す"] svg{display:block}.inline-draw .drawbox{position:relative}.swipe-hint{position:absolute;right:8px;bottom:7px;font-size:12px;font-weight:800;background:#fff9e9cf;border-radius:12px;padding:4px 8px;pointer-events:none;color:#6a5c4e}.inline-draw .draw-controls .upload{flex:1;font-size:16px}.inline-draw .draw-controls{justify-content:space-between}.swipe-hint{opacity:0;transition:opacity .2s}.drawbox.waiting .swipe-hint{opacity:1}.drawbox.waiting{box-shadow:inset 0 -4px 0 #9ec8a9}.color-picker{position:relative;display:flex;align-items:center;flex-shrink:0}.color-palette[hidden]{display:none!important}.color-palette{position:absolute;left:0;bottom:calc(100% + 14px);width:min(284px,calc(100vw - 32px));display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:13px;background:#fffaf0;border:2px solid #5b493d;border-radius:17px;box-shadow:0 5px 0 #c8b9a1;z-index:9}.palette-swatch{height:47px;width:100%;border:2px solid #8c8072;border-radius:13px;touch-action:manipulation}.palette-swatch[aria-pressed="true"]{outline:3px solid #4d4037;outline-offset:2px}.color-cycle{touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-/* Child-friendly input: suppress browser gestures and provide playful pointer feedback. */
-html,body,.app{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
-img,canvas,button{-webkit-user-drag:none}
-@media(hover:hover) and (pointer:fine){.app,.app button,.app canvas{cursor:none!important}#magic-cursor{display:block}}
-#magic-cursor{display:none;position:fixed;left:0;top:0;z-index:100;pointer-events:none;font-size:29px;line-height:1;color:#ff9e52;text-shadow:0 2px #fff,2px 0 #fff,-2px 0 #fff,0 -2px #fff,0 0 8px #fff;transform:translate(-50%,-50%) rotate(-15deg);will-change:transform}
-#pointer-fx{position:fixed;inset:0;pointer-events:none;z-index:99;overflow:hidden}
-.fx-dot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--fx-color,#f3a1be);transform:translate(-50%,-50%);animation:fx-pop .65s ease-out forwards;will-change:transform,opacity}
-.fx-dot.star{width:auto;height:auto;border-radius:0;background:none;font-size:17px;line-height:1}
-@keyframes fx-pop{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,-26px))) scale(.25)}}
-@media(prefers-reduced-motion:reduce){.fx-dot{animation-duration:.18s}}
-.template-picker{position:relative;flex-shrink:0}.template-cycle{width:46px;min-width:46px;padding:6px!important;font-size:25px!important}.template-list[hidden]{display:none!important}.template-list{position:absolute;bottom:calc(100% + 14px);left:-60px;width:min(310px,calc(100vw - 25px));display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:10px;background:#fffaf0;border:2px solid #5b493d;border-radius:16px;box-shadow:0 5px #c8b9a1;z-index:10}.template-option{background:white;border:2px solid #d4c7b3;border-radius:12px;min-height:77px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px;font-size:12px;font-weight:800;color:#55473c}.template-option img{width:58px;height:49px;object-fit:contain}.template-option[aria-pressed=true]{border-color:#f49a59;background:#fff2d9}.template-cycle{touch-action:manipulation;-webkit-touch-callout:none;user-select:none}.inline-draw .draw-controls .upload{flex:0 0 46px!important;width:46px;min-width:46px;height:46px;min-height:46px;padding:6px!important;display:flex;align-items:center;justify-content:center;border-radius:12px}.inline-draw .draw-controls .upload svg{display:block;flex-shrink:0}@media(max-width:350px){.inline-draw .draw-controls .upload{flex-basis:42px!important;width:42px;min-width:42px;height:42px;min-height:42px}}.inline-draw .draw-controls .finish{flex:1;min-width:72px;min-height:46px;padding:7px 9px;background:#ffce79;border-color:#a16a42;color:#5d3b27;font-size:clamp(13px,3.7vw,17px);font-weight:900;white-space:nowrap}.inline-draw .draw-controls .finish:disabled{opacity:.65}.inline-draw .drawbox.waiting .swipe-hint{display:block;background:#fff3c7;color:#80532b;font-size:19px;left:50%;right:auto;bottom:50%;transform:translate(-50%,50%);padding:8px 16px;border:2px solid #e7b45d}.inline-draw .swipe-hint{display:none}@media(max-width:380px){.inline-draw .draw-controls{gap:5px}.inline-draw .draw-controls .finish{min-width:65px;padding:5px 6px}.inline-draw .draw-controls .color-cycle,.inline-draw .draw-controls .template-cycle,.inline-draw .draw-controls .upload{width:40px;min-width:40px;height:42px;min-height:42px}}
-/* Deliberate tool hierarchy: four compact tools together, primary action separated at right. */
-.inline-draw .draw-controls{display:flex;align-items:center;gap:10px;margin-top:9px}
-.inline-draw .drawing-tools{display:flex;align-items:center;gap:7px;flex:0 1 auto;min-width:0}
-.inline-draw .drawing-tools>.secondary,.inline-draw .drawing-tools>.template-picker,.inline-draw .drawing-tools>.color-picker{flex-shrink:0}
-.inline-draw .drawing-tools #clear{width:44px;min-width:44px;height:44px;min-height:44px;padding:5px;display:flex;align-items:center;justify-content:center}
-.inline-draw .drawing-tools .color-cycle,.inline-draw .drawing-tools .template-cycle,.inline-draw .drawing-tools .upload{width:44px;min-width:44px;height:44px;min-height:44px}
-.inline-draw .draw-controls .finish{margin-left:auto;flex:1 1 90px;min-width:82px;max-width:132px;min-height:48px;background:#ffb84c;border:2px solid #885327;border-radius:15px;box-shadow:0 3px 0 #b87831;color:#513016;font-size:17px;font-weight:1000;letter-spacing:.01em}
-.inline-draw .draw-controls .finish:active{transform:translateY(2px);box-shadow:0 1px 0 #b87831}
-.inline-draw .drawbox.waiting .swipe-hint{display:flex;align-items:center;justify-content:center;gap:9px;left:50%;right:auto;bottom:50%;transform:translate(-50%,50%);background:#fffaf1f2;color:#604333;border:2px solid #e3b977;border-radius:18px;min-width:100px;padding:12px 18px;box-shadow:0 4px 0 #d5b68b;pointer-events:none}
-.inline-draw .drawbox.waiting .swipe-hint span{font-size:36px;font-weight:1000;line-height:1;font-variant-numeric:tabular-nums}
-.inline-draw .drawbox.waiting .swipe-hint svg{width:27px;height:27px}
-@media(max-width:400px){.inline-draw .draw-controls{gap:7px}.inline-draw .drawing-tools{gap:5px}.inline-draw .drawing-tools #clear,.inline-draw .drawing-tools .color-cycle,.inline-draw .drawing-tools .template-cycle,.inline-draw .drawing-tools .upload{width:39px;min-width:39px;height:42px;min-height:42px}.inline-draw .draw-controls .finish{min-width:75px;padding:7px 5px;font-size:15px}}
-@media(max-width:350px){.inline-draw{padding-left:7px;padding-right:7px}.inline-draw .drawing-tools{gap:4px}.inline-draw .drawing-tools #clear,.inline-draw .drawing-tools .color-cycle,.inline-draw .drawing-tools .template-cycle,.inline-draw .drawing-tools .upload{width:36px;min-width:36px;height:40px;min-height:40px}.inline-draw .draw-controls .finish{min-width:69px;font-size:14px}}
-.inline-draw .drawbox.waiting .swipe-hint{left:auto!important;right:10px!important;top:9px!important;bottom:auto!important;transform:none!important;min-width:0!important;padding:5px 9px!important;gap:5px!important;border-radius:13px!important;background:#fffaf0e8!important;box-shadow:0 2px 0 #d5b68b!important}.inline-draw .drawbox.waiting .swipe-hint span{font-size:23px!important}.inline-draw .drawbox.waiting .swipe-hint svg{width:20px!important;height:20px!important}</style></head><body><div class="app"><div class="toptools"><button id="bomb" class="tool bomb-tool" aria-label="爆弾モードをオン" aria-pressed="false" title="キャラクターを選んで10秒後に爆発">💣</button><button id="photo" class="tool" aria-label="写真を保存" title="写真を保存">📷</button><button id="reset" class="tool" aria-label="はじめから" title="はじめから">↺</button></div><main class="world"><canvas id="world"></canvas></main><footer class="bottom"><section class="inline-draw"><div class="drawbox"><canvas id="draw"></canvas><div class="swipe-hint" aria-live="polite"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg><span id="countdown-number">5</span></div></div><div class="draw-controls"><div class="drawing-tools"><div class="color-picker"><button id="color-cycle" class="color-cycle" aria-label="色を変更。長押しで全色を表示" aria-haspopup="true" aria-expanded="false" title="タップで次の色・長押しで全色"></button><div id="color-palette" class="color-palette" role="group" aria-label="色を選ぶ" hidden></div></div><div class="template-picker"><button id="template-cycle" class="secondary template-cycle" aria-label="塗り絵テンプレートなし。タップで切替、長押しで一覧" aria-haspopup="true" aria-expanded="false" title="タップでテンプレート切替・長押しで一覧">❌</button><div id="template-list" class="template-list" role="group" aria-label="塗り絵テンプレートを選ぶ" hidden></div></div><button id="upload" class="secondary upload" aria-label="しゃしんをえらぶ" title="しゃしんをえらぶ"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="#54453e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="19" height="18" rx="3" fill="#fffdf4"/><circle cx="8.2" cy="8.6" r="2.2" fill="#ffce70"/><path d="m4.5 17 5.2-5.2 3.4 3.4 2.7-2.8 3.7 4.6" fill="#9cdbac" stroke="#548e6d"/></svg></button><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><button id="clear" class="secondary" aria-label="書き直す" title="消しゴム"><svg width="29" height="29" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-42 12 12)"><rect x="5.5" y="2.5" width="13" height="18" rx="3.2" fill="#f3f0e9" stroke="#54453e" stroke-width="1.6"/><path d="M5.5 12.5h13v4.8a3.2 3.2 0 0 1-3.2 3.2H8.7a3.2 3.2 0 0 1-3.2-3.2z" fill="#ee8f9d" stroke="#54453e" stroke-width="1.6"/><path d="M5.5 12.5h13" stroke="#54453e" stroke-width="1.5"/></g></svg></button></div><button id="finish" class="secondary finish" aria-label="できた">できた</button></div></div></section></footer></div>
-<div id="toast" class="toast" role="status"></div><div id="magic-cursor" aria-hidden="true">✦</div><div id="pointer-fx" aria-hidden="true"></div>
-<script>
-(()=>{
-const $=id=>document.getElementById(id),world=$('world'),wc=world.getContext('2d'),draw=$('draw'),dc=draw.getContext('2d');
-document.addEventListener('contextmenu',e=>e.preventDefault());
-document.addEventListener('dragstart',e=>e.preventDefault());
-document.addEventListener('selectstart',e=>{if(!e.target.closest('input'))e.preventDefault()});
-const magicCursor=$('magic-cursor'),pointerFx=$('pointer-fx');
-const finePointer=matchMedia('(hover:hover) and (pointer:fine)');
-let lastSpark=0;
-function sparkle(x,y,burst=false){if(document.hidden)return;const count=burst?9:1;for(let i=0;i<count;i++){const el=document.createElement('span'),star=burst||Math.random()>.55;el.className='fx-dot'+(star?' star':'');if(star)el.textContent=['✦','✧','★'][Math.floor(Math.random()*3)];el.style.left=x+'px';el.style.top=y+'px';el.style.setProperty('--fx-color',['#ff8ca6','#ffd36d','#7ac9e8','#a4dfab'][Math.floor(Math.random()*4)]);if(star)el.style.color=['#ff8ca6','#ffc14c','#7ac9e8','#94cfa1'][Math.floor(Math.random()*4)];el.style.setProperty('--dx',(burst?(Math.random()-.5)*85:(Math.random()-.5)*23)+'px');el.style.setProperty('--dy',(burst?(Math.random()-.5)*85:-18-Math.random()*16)+'px');pointerFx.append(el);el.addEventListener('animationend',()=>el.remove(),{once:true});setTimeout(()=>el.remove(),900)}}
-document.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'&&finePointer.matches){magicCursor.style.left=e.clientX+'px';magicCursor.style.top=e.clientY+'px';magicCursor.style.display='block'}const now=performance.now();if(now-lastSpark>65&&(e.pointerType==='mouse'||e.buttons)){lastSpark=now;sparkle(e.clientX,e.clientY)}},{passive:true});
-document.addEventListener('pointerdown',e=>{if(e.button!==0)return;sparkle(e.clientX,e.clientY,true);if(finePointer.matches){magicCursor.style.transform='translate(-50%,-50%) rotate(15deg) scale(.8)';setTimeout(()=>magicCursor.style.transform='translate(-50%,-50%) rotate(-15deg)',140)}},{passive:true});
-document.addEventListener('pointerleave',()=>magicCursor.style.display='none');
-
-const paletteColors=[['あか','#ed5057'],['オレンジ','#ff8a35'],['きいろ','#f5cd34'],['きみどり','#a4ce4a'],['みどり','#39a86b'],['みずいろ','#50c7e8'],['あお','#3979dc'],['むらさき','#8959c8'],['ピンク','#f48cba'],['ちゃいろ','#925e3b'],['くろ','#33333b'],['はいいろ','#91939b'],['しろ','#ffffff'],['はだいろ','#f5c6a3'],['こんいろ','#273d79'],['こげちゃ','#5b3b2e']];const colors=paletteColors.map(x=>x[1]);let color=colors[0],strokes=[],current=null,monsters=[],drawing=false,pendingImage=null,floatTimer=null,w=0,h=0,last=performance.now(),tick=0,bombMode=false,particles=[];
-let audioCtx=null,lastDrawSound=0;
-function audio(){try{audioCtx??=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx}catch{return null}}
-function tone(freq,duration=.1,type='sine',volume=.055,delay=0,endFreq=null){const c=audio();if(!c)return;const t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.setValueAtTime(Math.max(20,freq),t);if(endFreq)o.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),t+duration);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g).connect(c.destination);o.start(t);o.stop(t+duration+.02)}
-function soundDraw(){const n=performance.now();if(n-lastDrawSound<75)return;lastDrawSound=n;tone(330+Math.random()*130,.055,'sine',.014)}
-function soundFloat(){tone(440,.13,'sine',.06);tone(660,.17,'sine',.06,.11);tone(880,.23,'sine',.05,.24)}
-function soundTick(n){tone(n<=3?780:560,.095,'square',.022)}
-function soundExplosion(){tone(165,.42,'sawtooth',.095,0,38);tone(80,.35,'triangle',.08,.06,25);for(let i=0;i<5;i++)tone(100+Math.random()*270,.13,'sawtooth',.018,i*.038,35)}
-const bgm=new Audio('./Through_the_Garden_Gate.mp3');bgm.loop=true;bgm.volume=.28;bgm.preload='auto';let bgmUnlocked=false;
-function startBgm(){if(document.hidden)return;bgmUnlocked=true;bgm.play().catch(()=>{})}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){bgm.pause();if(audioCtx&&audioCtx.state==='running')audioCtx.suspend()}else{if(bgmUnlocked)bgm.play().catch(()=>{});if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume().catch(()=>{})}});
-document.addEventListener('pointerdown',startBgm,{once:true});
-function fit(c){const r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const ctx=c.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return [r.width,r.height]}
-function resize(){[w,h]=fit(world);fit(draw);renderDrawing()}addEventListener('resize',resize);
-const cycle=$('color-cycle'),palette=$('color-palette');let holdTimer=null,holdFired=false,holdStart=null,suppressClick=false;
-function updateCycle(){cycle.style.background=color;cycle.style.borderColor=color==='#ffffff'?'#aaa':'#fff';cycle.setAttribute('aria-label','現在の色：'+(paletteColors.find(p=>p[1]===color)?.[0]||'色')+'。タップで次の色、長押しで全色')}
-function closePalette(){palette.hidden=true;cycle.setAttribute('aria-expanded','false')}
-function openPalette(){palette.hidden=false;cycle.setAttribute('aria-expanded','true');for(const b of palette.children)b.setAttribute('aria-pressed',String(b.dataset.color===color))}
-paletteColors.forEach(([name,hex])=>{const b=document.createElement('button');b.type='button';b.className='palette-swatch';b.dataset.color=hex;b.style.background=hex;b.setAttribute('aria-label',name);b.title=name;b.onclick=()=>{color=hex;updateCycle();closePalette();renderDrawing()};palette.append(b)});
-updateCycle();
-cycle.addEventListener('pointerdown',e=>{if(e.button!==0)return;holdFired=false;holdStart={x:e.clientX,y:e.clientY};clearTimeout(holdTimer);holdTimer=setTimeout(()=>{holdFired=true;suppressClick=true;openPalette();if(navigator.vibrate)navigator.vibrate(20)},480)});
-cycle.addEventListener('pointermove',e=>{if(holdStart&&Math.hypot(e.clientX-holdStart.x,e.clientY-holdStart.y)>12)clearTimeout(holdTimer)});
-for(const ev of ['pointerup','pointercancel','pointerleave'])cycle.addEventListener(ev,()=>{clearTimeout(holdTimer);holdStart=null});
-cycle.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(holdTimer);holdFired=true;suppressClick=true;openPalette()});
-cycle.onclick=()=>{if(suppressClick||holdFired){suppressClick=false;holdFired=false;return}if(!palette.hidden){closePalette();return}color=colors[(colors.indexOf(color)+1)%colors.length];updateCycle();renderDrawing()};
-document.addEventListener('pointerdown',e=>{if(!palette.hidden&&!e.target.closest('.color-picker'))closePalette()});
-
-const templateDefs=[
-['なし','❌',''],
-['ねこ','🐱','<path d="M27 43 22 15 42 28Q60 22 78 28L98 15 93 43Q107 62 94 84Q80 104 60 101Q40 104 26 84Q13 62 27 43Z"/><path d="M42 62h3m30 0h3M55 77q5 7 10 0M29 75l-13 -4m13 12-13 4m75-12 13-4m-13 12 13 4"/>'],
-['いぬ','🐶','<path d="M34 31Q60 20 86 31Q99 46 94 76Q83 101 60 100Q37 101 26 76Q21 46 34 31Z"/><path d="M34 31Q13 22 12 47Q12 64 29 61M86 31Q107 22 108 47Q108 64 91 61M44 62h2m28 0h2M54 78q6 7 12 0"/>'],
-['うさぎ','🐰','<path d="M39 40Q25 5 36 5Q48 4 52 37M68 37Q72 4 84 5Q95 5 81 40M60 33Q99 32 99 68Q99 100 60 101Q21 100 21 68Q21 32 60 33Z"/><path d="M43 67h2m30 0h2M56 80q4 5 8 0"/>'],
-['くるま','🚗','<path d="M18 52 31 30H89L102 52V83H18Z"/><path d="M25 52h70M42 30 36 52M78 30 84 52"/><circle cx="37" cy="84" r="11"/><circle cx="83" cy="84" r="11"/>'],
-['おはな','🌸','<circle cx="60" cy="52" r="12"/><path d="M48 46Q18 12 43 8Q60 5 60 34Q60 5 77 8Q102 12 72 46Q105 24 111 49Q113 70 75 61Q102 83 82 99Q63 111 60 69Q57 111 38 99Q18 83 45 61Q7 70 9 49Q15 24 48 46Z"/><circle cx="60" cy="52" r="12"/>'],
-['おさかな','🐟','<path d="M21 55Q51 15 94 55Q51 95 21 55Z"/><path d="M93 55 113 30V80Z M54 35 65 16 78 37 M54 75 65 94 78 73"/><circle cx="39" cy="50" r="3"/>'],
-['ほし','⭐','<path d="M60 9 74 40 108 44 82 67 89 102 60 84 31 102 38 67 12 44 46 40Z"/>'],
-['きょうりゅう','🦕','<path d="M26 89Q14 74 19 55L10 37 31 45 42 28 54 38 67 19Q91 8 101 26Q111 43 90 47L82 60Q95 75 91 88L75 88 70 74 54 76 49 89Z"/><circle cx="86" cy="30" r="2.5"/>']
-];
-const templateImages=templateDefs.map(([name,emoji,paths])=>{if(!paths)return null;const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 110"><g fill="white" stroke="#564b47" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round">'+paths+'</g></svg>';const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);img.onload=()=>renderDrawing();return img});
-let templateFills=[],templateIndex=0,templateHold=null,templateHoldFired=false,templateSuppress=false;
-const templateCycle=$('template-cycle'),templateList=$('template-list');
-function updateTemplate(){templateCycle.textContent=templateDefs[templateIndex][1];templateCycle.setAttribute('aria-label','塗り絵：'+templateDefs[templateIndex][0]+'。タップで切替、長押しで一覧');for(const b of templateList.children)b.setAttribute('aria-pressed',String(Number(b.dataset.index)===templateIndex));renderDrawing()}
-function closeTemplates(){templateList.hidden=true;templateCycle.setAttribute('aria-expanded','false')}
-function openTemplates(){closePalette();templateList.hidden=false;templateCycle.setAttribute('aria-expanded','true')}
-templateDefs.forEach(([name,emoji],i)=>{const b=document.createElement('button');b.type='button';b.className='template-option';b.dataset.index=i;b.setAttribute('aria-label',name);b.innerHTML=templateImages[i]?'<img alt="" src="'+templateImages[i].src+'"><span>'+name+'</span>':'<span style="font-size:28px">❌</span><span>なし</span>';b.onclick=()=>{cancelFloat();templateIndex=i;templateFills=[];strokes=[];pendingImage=null;updateTemplate();closeTemplates()};templateList.append(b)});
-templateCycle.addEventListener('pointerdown',e=>{if(e.button!==0)return;templateHoldFired=false;clearTimeout(templateHold);templateHold=setTimeout(()=>{templateHoldFired=true;templateSuppress=true;openTemplates();if(navigator.vibrate)navigator.vibrate(20)},480)});
-for(const ev of ['pointerup','pointercancel','pointerleave'])templateCycle.addEventListener(ev,()=>clearTimeout(templateHold));
-templateCycle.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(templateHold);templateHoldFired=true;templateSuppress=true;openTemplates()});
-templateCycle.onclick=()=>{if(templateSuppress||templateHoldFired){templateSuppress=false;templateHoldFired=false;return}cancelFloat();templateIndex=(templateIndex+1)%templateDefs.length;templateFills=[];strokes=[];pendingImage=null;updateTemplate()};
-document.addEventListener('pointerdown',e=>{if(!templateList.hidden&&!e.target.closest('.template-picker'))closeTemplates()});
-
-function templateArt(){const img=templateImages[templateIndex];if(!img||!img.complete||!img.naturalWidth)return null;const c=document.createElement('canvas');c.width=360;c.height=330;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);ctx.save();ctx.scale(3,3);for(const p of strokes){ctx.save();ctx.scale(120,110);ink(ctx,[p],p.inkColor||color,.42);ctx.restore()}ctx.restore();return c}
-let countdownTimer=null,countdownInterval=null,countdownEnd=0;
-function cancelFloat(){clearTimeout(countdownTimer);clearInterval(countdownInterval);countdownTimer=null;countdownInterval=null;draw.parentElement.classList.remove('waiting');$('finish').disabled=false}
-function scheduleFloat(){cancelFloat();if(!strokes.length&&!pendingImage&&!templateIndex)return toast('えを かいてね');countdownEnd=performance.now()+5000;draw.parentElement.classList.add('waiting');$('finish').disabled=true;const hint=draw.parentElement.querySelector('.swipe-hint');const update=()=>{const n=Math.max(0,Math.ceil((countdownEnd-performance.now())/1000));$('countdown-number').textContent=String(n);if(n>0)tone(440+n*55,.07,'sine',.022)};update();countdownInterval=setInterval(update,1000);countdownTimer=setTimeout(()=>{cancelFloat();if(!drawing)floatEditor()},5000)}
-$('finish').onclick=()=>{startBgm();scheduleFloat()};
-function show(v){if(!v){cancelFloat();strokes=[];templateFills=[];templateIndex=0;updateTemplate();current=null;pendingImage=null;renderDrawing()}}
-$('clear').onclick=()=>{cancelFloat();strokes=[];templateFills=[];current=null;pendingImage=null;renderDrawing()};
-function pt(e){const r=draw.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}}
-function templatePoint(e){const r=draw.getBoundingClientRect(),size=Math.min(r.width-16,r.height-10),tw=size,th=size*110/120;return{x:(e.clientX-r.left-(r.width-tw)/2)/tw,y:(e.clientY-r.top-(r.height-th)/2)/th}}
-draw.addEventListener('pointerdown',e=>{e.preventDefault();startBgm();cancelFloat();draw.setPointerCapture(e.pointerId);drawing=true;if(pendingImage){pendingImage=null;strokes=[]}current=[templateIndex?templatePoint(e):pt(e)];current.inkColor=color;strokes.push(current);soundDraw();renderDrawing()});
-draw.addEventListener('pointermove',e=>{if(!drawing)return;e.preventDefault();current.push(templateIndex?templatePoint(e):pt(e));soundDraw();renderDrawing()});
-function end(){if(!drawing)return;drawing=false;current=null}draw.addEventListener('pointerup',end);draw.addEventListener('pointercancel',end);
-function ink(ctx,paths,c,scale=1){ctx.strokeStyle=c;ctx.lineWidth=13*scale;ctx.lineCap='round';ctx.lineJoin='round';for(const path of paths){if(!path.length)continue;ctx.beginPath();ctx.moveTo(path[0].x,path[0].y);if(path.length===1){ctx.lineTo(path[0].x+.01,path[0].y+.01)}else for(let i=1;i<path.length;i++)ctx.lineTo(path[i].x,path[i].y);ctx.stroke()}}
-function renderDrawing(){const r=draw.getBoundingClientRect(),dw=r.width,dh=r.height;dc.clearRect(0,0,dw,dh);if(templateIndex&&templateImages[templateIndex]){const art=templateArt();if(art){const size=Math.min(dw-16,dh-10),tw=size*120/120,th=size*110/120,x=(dw-tw)/2,y=(dh-th)/2;dc.drawImage(art,x,y,tw,th)}return}if(pendingImage){const iw=pendingImage.width,ih=pendingImage.height,scale=Math.min((dw-25)/iw,(dh-18)/ih);dc.drawImage(pendingImage,(dw-iw*scale)/2,(dh-ih*scale)/2,iw*scale,ih*scale);return}dc.save();dc.scale(dw,dh);for(const path of strokes)ink(dc,[path],path.inkColor||color,.0014);dc.restore();}
-function bounds(paths){let minX=1,minY=1,maxX=0,maxY=0;for(const p of paths)for(const q of p){minX=Math.min(minX,q.x);minY=Math.min(minY,q.y);maxX=Math.max(maxX,q.x);maxY=Math.max(maxY,q.y)}return{minX,minY,maxX,maxY,width:Math.max(.05,maxX-minX),height:Math.max(.05,maxY-minY)}}
-function toast(t){/* Playground stays text-free; no unsolicited overlays. */}
-function floatEditor(){if(!pendingImage&&!strokes.length&&!templateIndex)return;let m;if(templateIndex){m={image:templateArt()};if(!m.image)return}else if(pendingImage){m={image:pendingImage}}else{const b=bounds(strokes),size=Math.min(90,Math.max(55,w*.16)),unit=size/Math.max(b.width,b.height),cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;const paths=strokes.map(p=>{const path=p.map(q=>({x:(q.x-cx)*unit,y:(q.y-cy)*unit}));path.inkColor=p.inkColor||color;return path});m={paths,color,size,faceY:-Math.min(12,b.height*unit*.18),eyeOffset:Math.min(14,b.width*unit*.17)}}Object.assign(m,{x:Math.max(50,Math.random()*Math.max(1,w-100)+50),y:Math.max(50,Math.random()*Math.max(1,h-100)+50),vx:(Math.random()-.5)*50,vy:(Math.random()-.5)*30,turnIn:1,phase:Math.random()*6.28,age:0});monsters.push(m);if(monsters.length>12)monsters.shift();show(false);soundFloat();toast('うかべたよ！')}
-$('bomb').onclick=()=>{bombMode=!bombMode;$('bomb').classList.toggle('active',bombMode);$('bomb').setAttribute('aria-pressed',String(bombMode));$('bomb').setAttribute('aria-label',bombMode?'爆弾モードをオフ':'爆弾モードをオン');world.style.cursor=bombMode?'crosshair':'default';toast(bombMode?'キャラクターをタップしてね':'爆弾モードを終了')};world.addEventListener('pointerdown',e=>{if(!bombMode)return;const r=world.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;for(let i=monsters.length-1;i>=0;i--){const m=monsters[i],radius=m.image?Math.min(85,w*.22):Math.max(42,(m.size||75)*.65);if(Math.hypot(x-m.x,y-m.y)<radius){if(!m.bombEnd){m.bombEnd=performance.now()+10000;m.lastBombSecond=11;soundTick(10);toast('10秒後に爆発！')}else toast('カウントダウン中！');break}}});
-function explode(m){soundExplosion();for(let i=0;i<26;i++){const a=Math.random()*Math.PI*2,sp=35+Math.random()*110;particles.push({x:m.x,y:m.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:.55+Math.random()*.45,max:1,color:['#ffdc6c','#ff8c6c','#ffffff','#e66d62'][i%4],r:3+Math.random()*7})}}
-function bg(ctx){ctx.fillStyle='#ffffff70';for(let i=0;i<8;i++){const x=(i*157+43)%Math.max(w,1),y=45+(i*73)%Math.max(h*.45,1);ctx.beginPath();ctx.arc(x,y,4+(i%3)*2,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#ffffff9a';for(const [x,y,s] of [[.18,.17,1],[.75,.27,.8]]){ctx.beginPath();ctx.ellipse(w*x,h*y,37*s,13*s,0,0,Math.PI*2);ctx.ellipse(w*x-20*s,h*y-7*s,22*s,15*s,0,0,Math.PI*2);ctx.ellipse(w*x+16*s,h*y-8*s,25*s,17*s,0,0,Math.PI*2);ctx.fill()}}
-function monster(ctx,m,t){const bob=Math.sin(t*3+m.phase)*5;ctx.save();ctx.translate(m.x,m.y+bob);const bounce=1+Math.sin(t*3+m.phase)*.035;ctx.scale(1/bounce,bounce);ctx.rotate(Math.sin(t*1.7+m.phase)*.055);ctx.globalAlpha=Math.min(1,m.age*3);if(m.image){const iw=m.image.width,ih=m.image.height,scale=Math.min(Math.min(160,w*.4)/iw,Math.min(170,h*.34)/ih);ctx.drawImage(m.image,-iw*scale/2,-ih*scale/2,iw*scale,ih*scale);ctx.restore();return}ctx.strokeStyle='#51443e';ctx.lineWidth=5;ctx.lineCap='round';const foot=m.size*.28;for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(s*19,foot-7);ctx.quadraticCurveTo(s*24,foot+13+Math.sin(t*5+m.phase+s)*6,s*33,foot+18);ctx.stroke()}for(const path of m.paths)ink(ctx,[path],path.inkColor||m.color,1);const fy=m.faceY;ctx.fillStyle='#fff';ctx.strokeStyle='#55453f';ctx.lineWidth=2.5;for(const s of [-1,1]){ctx.beginPath();ctx.ellipse(s*m.eyeOffset,fy,9,11,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#322c32';ctx.beginPath();ctx.arc(s*m.eyeOffset+Math.sin(t*.8+m.phase)*2,fy+1,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff'}ctx.strokeStyle='#493638';ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(0,fy+15,5,0,Math.PI);ctx.stroke();ctx.restore()}
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;tick+=dt;wc.clearRect(0,0,w,h);bg(wc);for(let i=monsters.length-1;i>=0;i--){const m=monsters[i];if(m.bombEnd&&now>=m.bombEnd){explode(m);monsters.splice(i,1);continue}m.age+=dt;m.turnIn-=dt;if(m.turnIn<=0){m.turnIn=.4+Math.random()*2.8;const a=Math.random()*Math.PI*2,speed=10+Math.random()*40;m.vx=Math.cos(a)*speed;m.vy=Math.sin(a)*speed}m.x+=m.vx*dt;m.y+=m.vy*dt;if(m.x<40){m.x=40;m.vx=Math.abs(m.vx)}if(m.x>w-40){m.x=w-40;m.vx=-Math.abs(m.vx)}if(m.y<45){m.y=45;m.vy=Math.abs(m.vy)}if(m.y>h-40){m.y=h-40;m.vy=-Math.abs(m.vy)}monster(wc,m,tick);if(m.bombEnd){const remaining=Math.max(0,Math.ceil((m.bombEnd-now)/1000));if(remaining!==m.lastBombSecond){m.lastBombSecond=remaining;soundTick(remaining)}wc.save();wc.font='900 22px system-ui';wc.textAlign='center';wc.lineWidth=4;wc.strokeStyle='#513b37';wc.fillStyle='#fff';wc.restore()}}for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=90*dt;wc.globalAlpha=Math.min(1,p.life*2);wc.fillStyle=p.color;wc.beginPath();wc.arc(p.x,p.y,p.r*Math.min(1,p.life*2),0,Math.PI*2);wc.fill()}wc.globalAlpha=1;requestAnimationFrame(frame)}
-$('upload').onclick=()=>$('image-input').click();$('image-input').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){toast('画像を選んでね');return}try{const url=URL.createObjectURL(file);const img=new Image();img.onload=()=>{URL.revokeObjectURL(url);cancelFloat();pendingImage=img;strokes=[];renderDrawing()};img.onerror=()=>{URL.revokeObjectURL(url);toast('画像を読み込めませんでした')};img.src=url}catch(err){toast('画像を読み込めませんでした')}e.target.value=''});
-$('photo').onclick=()=>{const out=document.createElement('canvas');out.width=1200;out.height=1200;const c=out.getContext('2d');c.fillStyle='#ccecf0';c.fillRect(0,0,1200,1200);c.fillStyle='#b7dd94';c.fillRect(0,880,1200,320);const s=Math.min(1200/Math.max(w,1),1000/Math.max(h,1));c.save();c.translate((1200-w*s)/2,(1000-h*s)/2+90);c.scale(s,s);for(const m of monsters)monster(c,m,tick);c.restore();c.fillStyle='#5b4c42';c.font='bold 42px sans-serif';c.fillText('うかべてあそぼ',38,68);out.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ukabete-asobo.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)},'image/png')};
-$('reset').onclick=()=>{monsters=[];particles=[]};resize();requestAnimationFrame(frame);
-})();
-</script></body></html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#f7eecf" />
+    <meta name="description" content="えをかいて、ふわふわ浮かべてあそぼ。" />
+    <title>うかべてあそぼ</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="toptools">
+        <button
+          id="bomb"
+          class="tool bomb-tool"
+          aria-label="爆弾モードをオン"
+          aria-pressed="false"
+          title="キャラクターを選んで10秒後に爆発"
+        >
+          💣
+        </button>
+        <button id="photo" class="tool" aria-label="写真を保存" title="写真を保存">📷</button>
+        <button id="reset" class="tool" aria-label="はじめから" title="はじめから">↺</button>
+      </div>
+      <main class="world"><canvas id="world"></canvas></main>
+      <footer class="bottom">
+        <section class="inline-draw">
+          <div class="drawbox">
+            <canvas id="draw"></canvas>
+            <div class="swipe-hint" aria-live="polite">
+              <svg
+                viewBox="0 0 24 24"
+                width="26"
+                height="26"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="13" r="8" />
+                <path d="M12 9v4l3 2M9 2h6" />
+              </svg>
+              <span id="countdown-number">5</span>
+            </div>
+          </div>
+          <div class="draw-controls">
+            <div class="drawing-tools">
+              <div class="color-picker">
+                <button
+                  id="color-cycle"
+                  class="color-cycle"
+                  aria-label="色を変更。長押しで全色を表示"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  title="タップで次の色・長押しで全色"
+                ></button>
+                <div id="color-palette" class="color-palette" role="group" aria-label="色を選ぶ" hidden></div>
+              </div>
+              <div class="template-picker">
+                <button
+                  id="template-cycle"
+                  class="secondary template-cycle"
+                  aria-label="塗り絵テンプレートなし。タップで切替、長押しで一覧"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  title="タップでテンプレート切替・長押しで一覧"
+                >
+                  ❌
+                </button>
+                <div
+                  id="template-list"
+                  class="template-list"
+                  role="group"
+                  aria-label="塗り絵テンプレートを選ぶ"
+                  hidden
+                ></div>
+              </div>
+              <button id="upload" class="secondary upload" aria-label="しゃしんをえらぶ" title="しゃしんをえらぶ">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="28"
+                  height="28"
+                  aria-hidden="true"
+                  fill="none"
+                  stroke="#54453e"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="2.5" y="3" width="19" height="18" rx="3" fill="#fffdf4" />
+                  <circle cx="8.2" cy="8.6" r="2.2" fill="#ffce70" />
+                  <path d="m4.5 17 5.2-5.2 3.4 3.4 2.7-2.8 3.7 4.6" fill="#9cdbac" stroke="#548e6d" />
+                </svg>
+              </button>
+              <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+              <button
+                id="clear"
+                class="secondary"
+                aria-label="書き直す"
+                title="消しゴム"
+              >
+                <svg width="29" height="29" viewBox="0 0 24 24" aria-hidden="true">
+                  <g transform="rotate(-42 12 12)">
+                    <rect
+                      x="5.5"
+                      y="2.5"
+                      width="13"
+                      height="18"
+                      rx="3.2"
+                      fill="#f3f0e9"
+                      stroke="#54453e"
+                      stroke-width="1.6"
+                    />
+                    <path
+                      d="M5.5 12.5h13v4.8a3.2 3.2 0 0 1-3.2 3.2H8.7a3.2 3.2 0 0 1-3.2-3.2z"
+                      fill="#ee8f9d"
+                      stroke="#54453e"
+                      stroke-width="1.6"
+                    />
+                    <path d="M5.5 12.5h13" stroke="#54453e" stroke-width="1.5" />
+                  </g>
+                </svg>
+              </button>
+            </div>
+            <button id="finish" class="secondary finish" aria-label="できた">できた</button>
+          </div>
+        </section>
+      </footer>
+    </div>
+    <div id="toast" class="toast" role="status"></div>
+    <div id="magic-cursor" aria-hidden="true">✦</div>
+    <div id="pointer-fx" aria-hidden="true"></div>
+    <script src="./src/main.js"></script>
+  </body>
+</html>
