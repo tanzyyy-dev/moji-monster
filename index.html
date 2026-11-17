@@ -11,24 +11,35 @@
   </head>
   <body>
     <div class="app">
-      <div class="toptools">
-        <button
-          id="bomb"
-          class="tool bomb-tool"
-          aria-label="爆弾モードをオン"
-          aria-pressed="false"
-          title="キャラクターを選んで10秒後に爆発"
-        >
-          <img class="lucide-icon" src="./assets/icons/bomb.svg" alt="" />
-        </button>
-        <button id="photo" class="tool" aria-label="写真を保存" title="写真を保存">
-          <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
-        </button>
-        <button id="reset" class="tool" aria-label="はじめから" title="はじめから">
-          <img class="lucide-icon" src="./assets/icons/rotate-ccw.svg" alt="" />
-        </button>
-      </div>
-      <main class="world"><canvas id="world"></canvas></main>
+      <header class="topbar" aria-label="ゲーム操作">
+        <div class="toptools top-left" role="group" aria-label="左の操作">
+          <button id="reset" class="tool" aria-label="はじめから" title="はじめから">
+            <img class="lucide-icon" src="./assets/icons/rotate-ccw.svg" alt="" />
+          </button>
+        </div>
+        <div class="toptools top-right" role="group" aria-label="右の操作">
+          <button id="photo" class="tool" aria-label="写真を撮る" title="写真を撮る">
+            <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
+          </button>
+          <button id="fireworks" class="tool" aria-label="花火を打ち上げる" title="花火を打ち上げる">
+            <img class="lucide-icon" src="./assets/icons/party-popper.svg" alt="" />
+          </button>
+          <button
+            id="bomb"
+            class="tool bomb-tool"
+            aria-label="爆弾モードをオン"
+            aria-pressed="false"
+            title="キャラクターを選んで10秒後に爆発"
+          >
+            <img class="lucide-icon" src="./assets/icons/bomb.svg" alt="" />
+          </button>
+        </div>
+      </header>
+      <main class="world">
+        <canvas id="world"></canvas>
+        <div id="photo-message" class="photo-message" aria-live="polite" hidden></div>
+        <div id="photo-flash" class="photo-flash" aria-hidden="true"></div>
+      </main>
       <footer class="bottom">
         <section class="inline-draw">
           <div class="drawbox">
@@ -47,12 +58,24 @@
                   aria-label="色と描画方法を選ぶ"
                   aria-haspopup="true"
                   aria-expanded="false"
-                  title="色と描画方法"
+                  title="色を選ぶ"
                 ></button>
-                <div id="color-palette" class="color-palette" role="group" aria-label="色と描画方法" hidden>
-                  <div id="palette-modes" class="palette-modes" role="group" aria-label="描画方法"></div>
+                <div id="color-palette" class="color-palette" role="group" aria-label="色" hidden>
                   <div id="palette-colors" class="palette-colors" role="group" aria-label="色"></div>
                 </div>
+              </div>
+              <div class="brush-picker">
+                <button
+                  id="brush-cycle"
+                  class="secondary brush-cycle"
+                  aria-label="描画方法を選ぶ"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                  title="描画方法"
+                >
+                  <img class="lucide-icon" src="./assets/icons/pencil.svg" alt="" />
+                </button>
+                <div id="brush-menu" class="brush-menu" role="group" aria-label="描画方法" hidden></div>
               </div>
               <div class="asset-picker">
                 <button

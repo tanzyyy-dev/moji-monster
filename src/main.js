@@ -1,5 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id),
+    app = document.querySelector(".app"),
+    topbar = document.querySelector(".topbar"),
     world = $("world"),
     wc = world.getContext("2d"),
     draw = $("draw"),
@@ -118,7 +120,12 @@
     last = performance.now(),
     tick = 0,
     bombMode = false,
-    particles = [];
+    particles = [],
+    nightProgress = 0,
+    photoInProgress = false,
+    fireworksInProgress = false,
+    fireworksStartedAt = 0,
+    photoSessionId = 0;
   let grabbedMonster = null,
     grabbedPointerId = null,
     grabOffsetX = 0,
@@ -218,12 +225,14 @@
     [w, h] = fit(world);
     fit(draw);
     renderDrawing();
+    positionOpenMenus();
   }
   addEventListener("resize", resize);
   const cycle = $("color-cycle"),
     palette = $("color-palette"),
-    paletteModes = $("palette-modes"),
-    paletteColorList = $("palette-colors");
+    paletteColorList = $("palette-colors"),
+    brushCycle = $("brush-cycle"),
+    brushMenu = $("brush-menu");
   let brushMode = "pen";
   const brushModeNames = {
     pen: "ペン",
@@ -245,17 +254,55 @@
   function brushScale() {
     return brushMode === "thick" ? 0.0028 : 0.0014;
   }
+  function positionMenu(menu, trigger) {
+    if (menu.hidden) return;
+    menu.style.left = "0px";
+    menu.style.top = "0px";
+    const menuRect = menu.getBoundingClientRect(),
+      triggerRect = trigger.getBoundingClientRect(),
+      viewportWidth = document.documentElement.clientWidth,
+      viewportHeight = document.documentElement.clientHeight,
+      left = Math.max(
+        8,
+        Math.min(triggerRect.left, viewportWidth - menuRect.width - 8),
+      ),
+      above = triggerRect.top - menuRect.height - 10,
+      below = triggerRect.bottom + 10,
+      top = Math.max(
+        8,
+        Math.min(above >= 8 ? above : below, viewportHeight - menuRect.height - 8),
+      );
+    menu.style.left = left + "px";
+    menu.style.top = top + "px";
+  }
+  function positionOpenMenus() {
+    positionMenu(palette, cycle);
+    positionMenu(brushMenu, brushCycle);
+    positionMenu(assetList, assetCycle);
+  }
+  function closePalette() {
+    palette.hidden = true;
+    cycle.setAttribute("aria-expanded", "false");
+  }
+  function closeBrushMenu() {
+    brushMenu.hidden = true;
+    brushCycle.setAttribute("aria-expanded", "false");
+  }
+  function closeAssets() {
+    assetList.hidden = true;
+    assetCycle.setAttribute("aria-expanded", "false");
+  }
   function updateBrushMenu() {
-    for (const button of paletteModes.children)
+    for (const button of brushMenu.children)
       button.setAttribute(
         "aria-pressed",
         String(button.dataset.mode === brushMode),
       );
-    for (const button of paletteColorList.children)
-      button.setAttribute(
-        "aria-pressed",
-        String(button.dataset.color === color),
-      );
+    brushCycle.replaceChildren(lucideIcon(brushModeIcons[brushMode]));
+    brushCycle.setAttribute(
+      "aria-label",
+      "現在の描画方法：" + brushModeNames[brushMode] + "。タップで変更",
+    );
   }
   function updateCycle() {
     cycle.style.background = color;
@@ -264,37 +311,38 @@
       "aria-label",
       "現在の色：" +
         (paletteColors.find((p) => p[1] === color)?.[0] || "色") +
-        "、描画方法：" +
-        brushModeNames[brushMode] +
-        "。タップでメニューを開く",
+        "。タップで色を変更",
     );
   }
-  function closePalette() {
-    palette.hidden = true;
-    cycle.setAttribute("aria-expanded", "false");
-  }
   function openPalette() {
+    closeBrushMenu();
     closeAssets();
     palette.hidden = false;
     cycle.setAttribute("aria-expanded", "true");
-    updateBrushMenu();
+    positionMenu(palette, cycle);
   }
-  Object.entries(brushModeNames).forEach(([mode, label]) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "palette-mode";
-    button.dataset.mode = mode;
-    button.setAttribute("aria-label", label);
-    button.setAttribute("aria-pressed", String(mode === brushMode));
-    button.append(lucideIcon(brushModeIcons[mode]));
-    button.onclick = () => {
-      brushMode = mode;
-      updateBrushMenu();
-      updateCycle();
-      closePalette();
-    };
-    paletteModes.append(button);
-  });
+  function openBrushMenu() {
+    closePalette();
+    closeAssets();
+    brushMenu.hidden = false;
+    brushCycle.setAttribute("aria-expanded", "true");
+    positionMenu(brushMenu, brushCycle);
+  }
+  function openAssets() {
+    closePalette();
+    closeBrushMenu();
+    updateAssets();
+    assetList.hidden = false;
+    assetCycle.setAttribute("aria-expanded", "true");
+    positionMenu(assetList, assetCycle);
+  }
+  function updatePalette() {
+    for (const button of paletteColorList.children)
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.color === color),
+      );
+  }
   paletteColors.forEach(([name, hex]) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -306,19 +354,55 @@
     b.onclick = () => {
       color = hex;
       updateCycle();
-      updateBrushMenu();
+      updatePalette();
       closePalette();
       renderDrawing();
     };
     paletteColorList.append(b);
   });
   updateCycle();
+  Object.entries(brushModeNames).forEach(([mode, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "brush-option";
+    button.dataset.mode = mode;
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-pressed", String(mode === brushMode));
+    button.append(lucideIcon(brushModeIcons[mode]));
+    button.onclick = () => {
+      brushMode = mode;
+      updateBrushMenu();
+      closeBrushMenu();
+    };
+    brushMenu.append(button);
+  });
+  updateBrushMenu();
+  updatePalette();
   cycle.onclick = () => {
     if (palette.hidden) openPalette();
     else closePalette();
   };
+  brushCycle.onclick = () => {
+    if (brushMenu.hidden) openBrushMenu();
+    else closeBrushMenu();
+  };
   document.addEventListener("pointerdown", (e) => {
-    if (!palette.hidden && !e.target.closest(".color-picker")) closePalette();
+    const target = e.target;
+    if (!palette.hidden && !palette.contains(target) && !cycle.contains(target))
+      closePalette();
+    if (
+      !brushMenu.hidden &&
+      !brushMenu.contains(target) &&
+      !brushCycle.contains(target)
+    )
+      closeBrushMenu();
+    if (
+      !assetList.hidden &&
+      !assetList.contains(target) &&
+      !assetCycle.contains(target)
+    )
+      closeAssets();
   });
 
   const templateDefs = [
@@ -387,16 +471,6 @@
         String(Number(button.dataset.templateIndex) === templateIndex),
       );
   }
-  function closeAssets() {
-    assetList.hidden = true;
-    assetCycle.setAttribute("aria-expanded", "false");
-  }
-  function openAssets() {
-    closePalette();
-    updateAssets();
-    assetList.hidden = false;
-    assetCycle.setAttribute("aria-expanded", "true");
-  }
   templateDefs.slice(1).forEach(([name], index) => {
     const i = index + 1;
     const b = document.createElement("button");
@@ -439,9 +513,6 @@
     if (assetList.hidden) openAssets();
     else closeAssets();
   };
-  document.addEventListener("pointerdown", (e) => {
-    if (!assetList.hidden && !e.target.closest(".asset-picker")) closeAssets();
-  });
 
   function hexRgb(hex) {
     const value = Number.parseInt(hex.slice(1), 16);
@@ -651,6 +722,7 @@
     $("finish").disabled = false;
   }
   function scheduleFloat() {
+    if (photoInProgress || fireworksInProgress) return;
     cancelFloat();
     if (!strokes.length && !pendingImage && !templateIndex)
       return toast("えを かいてね");
@@ -837,7 +909,7 @@
   function characterDisplayScale() {
     return w <= 600 && h > w ? 0.68 : 1;
   }
-  function characterRadius(m) {
+  function baseCharacterRadius(m) {
     if (m.image) {
       const scale = Math.min(
         Math.min(160, w * 0.4) / m.image.width,
@@ -849,6 +921,9 @@
       );
     }
     return Math.max(28, (m.size || 75) * 0.54);
+  }
+  function characterRadius(m) {
+    return baseCharacterRadius(m) * (m.presentationScale || 1);
   }
   function worldPoint(e) {
     const r = world.getBoundingClientRect();
@@ -952,6 +1027,7 @@
     }
   }
   function floatEditor() {
+    if (photoInProgress || fireworksInProgress) return;
     if (!pendingImage && !strokes.length && !templateIndex) return;
     let m;
     if (templateIndex) {
@@ -1018,6 +1094,7 @@
     toast(bombMode ? "キャラクターをタップしてね" : "爆弾モードを終了");
   };
   world.addEventListener("pointerdown", (e) => {
+    if (photoInProgress || (fireworksInProgress && !bombMode)) return;
     if (e.button !== 0) return;
     const point = worldPoint(e),
       m = characterAt(point.x, point.y);
@@ -1079,25 +1156,69 @@
       });
     }
   }
-  function bg(ctx) {
-    ctx.fillStyle = "#ffffff70";
+  function fireworksBurst(m) {
+    const colors = ["#ffef8a", "#ff8d7e", "#95def4", "#d8a5ff", "#fff7e8"];
+    for (let i = 0; i < 52; i++) {
+      const angle = (Math.PI * 2 * i) / 52 + (Math.random() - 0.5) * 0.12,
+        speed = 55 + Math.random() * 125;
+      particles.push({
+        x: m.x,
+        y: m.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.7 + Math.random() * 0.75,
+        max: 1,
+        color: colors[i % colors.length],
+        r: 2 + Math.random() * 4,
+      });
+    }
+  }
+  function blendHex(dayColor, nightColor, amount) {
+    const day = hexRgb(dayColor),
+      night = hexRgb(nightColor);
+    return (
+      "#" +
+      day
+        .map((channel, index) =>
+          Math.round(channel + (night[index] - channel) * amount)
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")
+    );
+  }
+  function bg(ctx, width = w, height = h, topOffset = 0, totalHeight = height) {
+    const dayColors = ["#bfeaf4", "#f2f8e9", "#c5e6a0", "#a9d67f"],
+      nightColors = ["#111d43", "#242b5b", "#27264c", "#18213b"],
+      stops = [0, 0.69, 0.7, 1],
+      gradient = ctx.createLinearGradient(0, -topOffset, 0, totalHeight - topOffset);
+    stops.forEach((stop, index) =>
+      gradient.addColorStop(
+        stop,
+        blendHex(dayColors[index], nightColors[index], nightProgress),
+      ),
+    );
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = `rgba(255,255,255,${0.44 + nightProgress * 0.5})`;
     for (let i = 0; i < 8; i++) {
-      const x = (i * 157 + 43) % Math.max(w, 1),
-        y = 45 + ((i * 73) % Math.max(h * 0.45, 1));
+      const x = (i * 157 + 43) % Math.max(width, 1),
+        y = 45 + ((i * 73) % Math.max(height * 0.45, 1));
       ctx.beginPath();
       ctx.arc(x, y, 4 + (i % 3) * 2, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = "#ffffff9a";
+    ctx.fillStyle = `rgba(255,255,255,${0.6 * (1 - nightProgress)})`;
     for (const [x, y, s] of [
       [0.18, 0.17, 1],
       [0.75, 0.27, 0.8],
     ]) {
       ctx.beginPath();
-      ctx.ellipse(w * x, h * y, 37 * s, 13 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(width * x, height * y, 37 * s, 13 * s, 0, 0, Math.PI * 2);
       ctx.ellipse(
-        w * x - 20 * s,
-        h * y - 7 * s,
+        width * x - 20 * s,
+        height * y - 7 * s,
         22 * s,
         15 * s,
         0,
@@ -1105,8 +1226,8 @@
         Math.PI * 2,
       );
       ctx.ellipse(
-        w * x + 16 * s,
-        h * y - 8 * s,
+        width * x + 16 * s,
+        height * y - 8 * s,
         25 * s,
         17 * s,
         0,
@@ -1114,6 +1235,19 @@
         Math.PI * 2,
       );
       ctx.fill();
+    }
+    if (nightProgress > 0) {
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 173 + 61) % Math.max(width, 1),
+          y = (i * 107 + 19) % Math.max(height * 0.82, 1),
+          twinkle = 0.55 + (Math.sin(tick * 2.4 + i * 1.9) + 1) * 0.2;
+        ctx.globalAlpha = nightProgress * twinkle;
+        ctx.fillStyle = i % 6 === 0 ? "#ffd98a" : "#fff8d8";
+        ctx.beginPath();
+        ctx.arc(x, y, i % 5 === 0 ? 2.2 : 1.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
   }
   function drawSweatDrop(ctx, x, y, size) {
@@ -1141,7 +1275,7 @@
     ctx.fill();
   }
   function drawActionEffects(ctx, m, t, action) {
-    const size = characterRadius(m) * 1.6;
+    const size = baseCharacterRadius(m) * 1.6;
     if (m === grabbedMonster || action === "sweat" || t < m.sweatUntil) {
       const flutter = Math.sin(t * 15 + m.phase) * 2;
       drawSweatDrop(ctx, -size * 0.52, -size * 0.45 + flutter, 4.5);
@@ -1199,7 +1333,11 @@
       twist = dancing ? Math.sin(t * 10 + m.phase) * 0.16 : 0;
     ctx.save();
     ctx.translate(m.x, m.y + bob);
-    ctx.scale((grabbed ? 1.06 : 1) / bounce, bounce / (grabbed ? 1.04 : 1));
+    const presentationScale = m.presentationScale || 1;
+    ctx.scale(
+      ((grabbed ? 1.06 : 1) / bounce) * presentationScale,
+      (bounce / (grabbed ? 1.04 : 1)) * presentationScale,
+    );
     ctx.rotate(Math.sin(t * 1.7 + m.phase) * 0.055 + twist);
     ctx.globalAlpha = Math.min(1, m.age * 3);
     if (m.image) {
@@ -1311,8 +1449,10 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     tick += dt;
+    if (fireworksInProgress)
+      nightProgress = Math.min(1, nightProgress + dt / 3.2);
     wc.clearRect(0, 0, w, h);
-    bg(wc);
+    bg(wc, w, h, topbar.offsetHeight, app.clientHeight);
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i];
       if (m.bombEnd && now >= m.bombEnd) {
@@ -1321,6 +1461,68 @@
         continue;
       }
       m.age += dt;
+      if (photoInProgress) {
+        const target = m.photoTarget,
+          easing = 1 - Math.exp(-dt * 5);
+        if (target) {
+          m.x += (target.x - m.x) * easing;
+          m.y += (target.y - m.y) * easing;
+          m.presentationScale =
+            (m.presentationScale || 1) +
+            (target.scale - (m.presentationScale || 1)) * easing;
+          if (
+            Math.abs(target.x - m.x) < 0.2 &&
+            Math.abs(target.y - m.y) < 0.2 &&
+            Math.abs(target.scale - m.presentationScale) < 0.002
+          ) {
+            m.x = target.x;
+            m.y = target.y;
+            m.presentationScale = target.scale;
+          }
+        }
+        m.vx = 0;
+        m.vy = 0;
+        continue;
+      }
+      if (fireworksInProgress && m.fireworkAt) {
+        if (now < m.fireworkAt) {
+          m.vx = 0;
+          m.vy = 0;
+          continue;
+        }
+        if (!m.fireworkStartAt) {
+          m.fireworkStartAt = now;
+          m.fireworkStartX = m.x;
+          m.fireworkStartY = m.y;
+        }
+        const duration = 850,
+          progress = Math.min(1, (now - m.fireworkStartAt) / duration);
+        if (progress >= 1) {
+          fireworksBurst(m);
+          monsters.splice(i, 1);
+          continue;
+        }
+        const eased = 1 - (1 - progress) ** 2,
+          targetY = Math.max(
+            12,
+            Math.min(h * 0.1, m.fireworkStartY - 100),
+          );
+        m.x = m.fireworkStartX + Math.sin(progress * Math.PI) * 7;
+        m.y = m.fireworkStartY - (m.fireworkStartY - targetY) * eased;
+        if (Math.random() < 0.72) {
+          particles.push({
+            x: m.x + (Math.random() - 0.5) * 8,
+            y: m.y + baseCharacterRadius(m) * 0.35,
+            vx: (Math.random() - 0.5) * 18,
+            vy: 16 + Math.random() * 32,
+            life: 0.3 + Math.random() * 0.25,
+            max: 1,
+            color: Math.random() < 0.5 ? "#fff5bf" : "#ffbd70",
+            r: 2 + Math.random() * 2.5,
+          });
+        }
+        continue;
+      }
       if (m === grabbedMonster) {
         m.vx = 0;
         m.vy = 0;
@@ -1358,7 +1560,7 @@
         m.nextActionAt = tick + 4 + Math.random() * 5;
       }
     }
-    avoidNearCollisions();
+    if (!photoInProgress && !fireworksInProgress) avoidNearCollisions();
     for (const m of monsters) {
       monster(wc, m, tick);
       if (m.bombEnd) {
@@ -1393,6 +1595,15 @@
       wc.fill();
     }
     wc.globalAlpha = 1;
+    if (
+      fireworksInProgress &&
+      nightProgress >= 1 &&
+      monsters.every((m) => !m.fireworkAt)
+    ) {
+      fireworksInProgress = false;
+      $("photo").disabled = false;
+      $("fireworks").disabled = false;
+    }
     requestAnimationFrame(frame);
   }
   $("image-input").addEventListener("change", async (e) => {
@@ -1427,37 +1638,179 @@
     }
     e.target.value = "";
   });
-  $("photo").onclick = () => {
+  const photoButton = $("photo"),
+    fireworksButton = $("fireworks"),
+    photoMessage = $("photo-message"),
+    photoFlash = $("photo-flash");
+  function photoTargets() {
+    if (!monsters.length) return [];
+    const marginX = Math.min(18, w * 0.05),
+      marginY = Math.min(22, h * 0.05),
+      areaWidth = Math.max(1, w - marginX * 2),
+      areaHeight = Math.max(1, h - marginY * 2),
+      maxRadius = Math.max(...monsters.map(baseCharacterRadius));
+    let best = { columns: 1, scale: 0 };
+    for (let columns = 1; columns <= monsters.length; columns++) {
+      const rows = Math.ceil(monsters.length / columns),
+        cellWidth = areaWidth / columns,
+        cellHeight = areaHeight / rows,
+        scale = Math.min(
+          1,
+          cellWidth / (maxRadius * 2 + 24),
+          cellHeight / (maxRadius * 2 + 24),
+        );
+      if (scale > best.scale) best = { columns, rows, cellWidth, cellHeight, scale };
+    }
+    return monsters.map((_, index) => {
+      const row = Math.floor(index / best.columns),
+        column = index % best.columns,
+        rowCount = Math.min(best.columns, monsters.length - row * best.columns),
+        rowWidth = rowCount * best.cellWidth;
+      return {
+        x: (w - rowWidth) / 2 + best.cellWidth * (column + 0.5),
+        y: marginY + best.cellHeight * (row + 0.5),
+        scale: best.scale,
+      };
+    });
+  }
+  function showPhotoMessage(text) {
+    photoMessage.textContent = text;
+    photoMessage.hidden = false;
+    photoMessage.classList.remove("pop");
+    void photoMessage.offsetWidth;
+    photoMessage.classList.add("pop");
+  }
+  function savePhoto() {
     const out = document.createElement("canvas");
     out.width = 1200;
     out.height = 1200;
     const c = out.getContext("2d");
-    c.fillStyle = "#ccecf0";
-    c.fillRect(0, 0, 1200, 1200);
-    c.fillStyle = "#b7dd94";
-    c.fillRect(0, 880, 1200, 320);
-    const s = Math.min(1200 / Math.max(w, 1), 1000 / Math.max(h, 1));
+    const capturedAt = new Date(),
+      dateLabel = new Intl.DateTimeFormat("ja-JP", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }).format(capturedAt),
+      s = Math.min(1080 / Math.max(w, 1), 930 / Math.max(h, 1));
+    bg(c, out.width, out.height);
     c.save();
-    c.translate((1200 - w * s) / 2, (1000 - h * s) / 2 + 90);
+    c.translate((out.width - w * s) / 2, 135 + (930 - h * s) / 2);
     c.scale(s, s);
     for (const m of monsters) monster(c, m, tick);
     c.restore();
-    c.fillStyle = "#5b4c42";
-    c.font = "bold 42px sans-serif";
-    c.fillText("うかべてあそぼ", 38, 68);
+    c.textAlign = "center";
+    c.lineJoin = "round";
+    c.font = '1000 48px "Hiragino Maru Gothic ProN", "M PLUS Rounded 1c", system-ui, sans-serif';
+    c.lineWidth = 12;
+    c.strokeStyle = "#fffaf0";
+    c.strokeText("うかべてあそぼ", 600, 78);
+    c.fillStyle = "#57463f";
+    c.fillText("うかべてあそぼ", 600, 78);
+    c.font = '700 25px "Hiragino Maru Gothic ProN", "M PLUS Rounded 1c", system-ui, sans-serif';
+    c.lineWidth = 8;
+    c.strokeText(dateLabel, 600, 1144);
+    c.fillStyle = "#57463f";
+    c.fillText(dateLabel, 600, 1144);
     out.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
+        a = document.createElement("a"),
+        dateStamp = [
+          capturedAt.getFullYear(),
+          String(capturedAt.getMonth() + 1).padStart(2, "0"),
+          String(capturedAt.getDate()).padStart(2, "0"),
+        ].join("-");
       a.href = url;
-      a.download = "ukabete-asobo.png";
+      a.download = "ukabete-asobo-" + dateStamp + ".png";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, "image/png");
-  };
+  }
+  const wait = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
+  async function takePhoto() {
+    if (photoInProgress || fireworksInProgress) return;
+    cancelFloat();
+    const session = ++photoSessionId,
+      targets = photoTargets();
+    photoInProgress = true;
+    photoButton.disabled = true;
+    fireworksButton.disabled = true;
+    if (grabbedMonster) releaseGrab(null, false);
+    monsters.forEach((m, index) => {
+      m.photoTarget = targets[index];
+      m.presentationScale = m.presentationScale || 1;
+      m.vx = 0;
+      m.vy = 0;
+      m.turnIn = 3;
+      m.nextActionAt = Math.max(m.nextActionAt, tick + 3);
+    });
+    showPhotoMessage("あつまれ〜");
+    await wait(600);
+    if (session !== photoSessionId) return;
+    showPhotoMessage("ならんで〜");
+    await wait(1050);
+    if (session !== photoSessionId) return;
+    for (const m of monsters) {
+      if (!m.photoTarget) continue;
+      m.x = m.photoTarget.x;
+      m.y = m.photoTarget.y;
+      m.presentationScale = m.photoTarget.scale;
+    }
+    showPhotoMessage("はい、チーズ！");
+    await wait(360);
+    if (session !== photoSessionId) return;
+    photoFlash.classList.remove("active");
+    void photoFlash.offsetWidth;
+    photoFlash.classList.add("active");
+    savePhoto();
+    await wait(420);
+    if (session !== photoSessionId) return;
+    photoMessage.hidden = true;
+    photoMessage.classList.remove("pop");
+    photoInProgress = false;
+    photoButton.disabled = false;
+    fireworksButton.disabled = false;
+    for (const m of monsters) {
+      m.photoTarget = null;
+      m.turnIn = 0.7;
+      m.nextActionAt = Math.max(m.nextActionAt, tick + 2);
+    }
+  }
+  function startFireworks() {
+    if (photoInProgress || fireworksInProgress) return;
+    cancelFloat();
+    fireworksInProgress = true;
+    fireworksStartedAt = performance.now();
+    photoButton.disabled = true;
+    fireworksButton.disabled = true;
+    if (grabbedMonster) releaseGrab(null, false);
+    monsters.forEach((m, index) => {
+      m.photoTarget = null;
+      m.vx = 0;
+      m.vy = 0;
+      m.fireworkAt = fireworksStartedAt + 3200 + index * 1050;
+      m.fireworkStartAt = 0;
+    });
+  }
+  photoButton.onclick = () => void takePhoto();
+  fireworksButton.onclick = startFireworks;
   $("reset").onclick = () => {
+    cancelFloat();
+    photoSessionId++;
+    photoInProgress = false;
+    fireworksInProgress = false;
+    nightProgress = 0;
+    fireworksStartedAt = 0;
+    photoMessage.hidden = true;
+    photoMessage.classList.remove("pop");
+    photoFlash.classList.remove("active");
+    photoButton.disabled = false;
+    fireworksButton.disabled = false;
     monsters = [];
     particles = [];
+    grabbedMonster = null;
+    grabbedPointerId = null;
+    world.style.cursor = bombMode ? "crosshair" : "default";
   };
   resize();
   requestAnimationFrame(frame);
