@@ -555,7 +555,9 @@
     const canvas = document.createElement("canvas");
     canvas.width = draw.width;
     canvas.height = draw.height;
-    canvas.getContext("2d").drawImage(draw, 0, 0);
+    canvas
+      .getContext("2d", { willReadFrequently: true })
+      .drawImage(draw, 0, 0);
     if (
       floodFillCanvas(
         canvas,
@@ -580,7 +582,7 @@
     const c = document.createElement("canvas");
     c.width = 360;
     c.height = 330;
-    const ctx = c.getContext("2d");
+    const ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.drawImage(img, 0, 0, c.width, c.height);
     for (let i = 0; i < templateFills.length; i++) {
       const fill = templateFills[i];
