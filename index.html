@@ -13,25 +13,23 @@
     <div class="app">
       <header class="topbar" aria-label="ゲーム操作">
         <div class="toptools top-left" role="group" aria-label="左の操作">
-          <button id="reset" class="tool" aria-label="はじめから" title="はじめから">
-            <img class="lucide-icon" src="./assets/icons/rotate-ccw.svg" alt="" />
+          <button id="photo" class="tool" aria-label="写真を撮る" title="写真を撮る" disabled>
+            <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
           </button>
         </div>
         <div class="toptools top-right" role="group" aria-label="右の操作">
-          <button id="photo" class="tool" aria-label="写真を撮る" title="写真を撮る">
-            <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
-          </button>
-          <button id="fireworks" class="tool" aria-label="花火を打ち上げる" title="花火を打ち上げる">
-            <img class="lucide-icon" src="./assets/icons/party-popper.svg" alt="" />
-          </button>
           <button
             id="bomb"
             class="tool bomb-tool"
             aria-label="爆弾モードをオン"
             aria-pressed="false"
             title="キャラクターを選んで10秒後に爆発"
+            disabled
           >
             <img class="lucide-icon" src="./assets/icons/bomb.svg" alt="" />
+          </button>
+          <button id="fireworks" class="tool" aria-label="花火を打ち上げる" title="花火を打ち上げる" disabled>
+            <img class="lucide-icon" src="./assets/icons/party-popper.svg" alt="" />
           </button>
         </div>
       </header>

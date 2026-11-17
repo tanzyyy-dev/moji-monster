@@ -147,6 +147,25 @@
       return null;
     }
   }
+  let masterBus = null;
+  function output(c, pan = 0) {
+    if (!masterBus) {
+      // Gentle compressor so layered booms stay punchy without clipping.
+      const comp = c.createDynamicsCompressor();
+      comp.threshold.value = -16;
+      comp.knee.value = 10;
+      comp.ratio.value = 5;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.2;
+      comp.connect(c.destination);
+      masterBus = comp;
+    }
+    if (!pan || !c.createStereoPanner) return masterBus;
+    const panner = c.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, pan));
+    panner.connect(masterBus);
+    return panner;
+  }
   function tone(
     freq,
     duration = 0.1,
@@ -154,6 +173,7 @@
     volume = 0.055,
     delay = 0,
     endFreq = null,
+    pan = 0,
   ) {
     const c = audio();
     if (!c) return;
@@ -170,7 +190,7 @@
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    o.connect(g).connect(c.destination);
+    o.connect(g).connect(output(c, pan));
     o.start(t);
     o.stop(t + duration + 0.02);
   }
@@ -182,6 +202,8 @@
     filterFreq = 1200,
     filterType = "lowpass",
     endFilterFreq = null,
+    pan = 0,
+    attack = 0.006,
   ) {
     const c = audio();
     if (!c) return;
@@ -201,28 +223,41 @@
     if (endFilterFreq)
       filter.frequency.exponentialRampToValueAtTime(endFilterFreq, t + duration);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t + 0.006);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    src.connect(filter).connect(g).connect(c.destination);
+    src.connect(filter).connect(g).connect(output(c, pan));
     src.start(t, Math.random() * 0.5);
     src.stop(t + duration + 0.02);
   }
-  function soundRocket() {
-    tone(520, 0.85, "sine", 0.03, 0, 1500);
-    tone(530, 0.85, "triangle", 0.012, 0.02, 1560);
-    noise(0.7, 0.012, 0, 2400, "bandpass", 5200);
+  function soundRocket(pan = 0) {
+    // "Hyuuu~": a rising whistle with a little wobble plus airy hiss.
+    tone(480, 0.9, "sine", 0.04, 0, 1650, pan);
+    tone(492, 0.9, "triangle", 0.014, 0.015, 1700, pan);
+    tone(960, 0.6, "sine", 0.008, 0.25, 2600, pan);
+    noise(0.85, 0.02, 0, 1800, "bandpass", 6000, pan, 0.08);
+    noise(0.12, 0.05, 0, 900, "lowpass", 200, pan);
   }
-  function soundBurst() {
-    tone(130, 0.55, "sine", 0.13, 0, 42);
-    noise(0.6, 0.09, 0, 900, "lowpass", 120);
-    for (let i = 0; i < 14; i++)
+  function soundBurst(pan = 0) {
+    // "Doon!": sharp crack, deep body, echo, then a long crackle tail.
+    noise(0.07, 0.2, 0, 5000, "highpass", null, pan, 0.002);
+    tone(150, 0.7, "sine", 0.2, 0, 34, pan);
+    tone(75, 0.9, "sine", 0.16, 0.01, 28, pan);
+    noise(1.1, 0.16, 0, 2400, "lowpass", 90, pan, 0.004);
+    tone(120, 0.6, "sine", 0.05, 0.32, 30, -pan * 0.6);
+    noise(0.8, 0.045, 0.32, 900, "lowpass", 80, -pan * 0.6);
+    for (let i = 0; i < 26; i++) {
+      const at = 0.25 + Math.random() * 1.3;
       noise(
-        0.035,
-        0.03 + Math.random() * 0.03,
-        0.22 + Math.random() * 0.9,
-        3500 + Math.random() * 3000,
+        0.025 + Math.random() * 0.03,
+        0.025 + Math.random() * 0.05 * (1.4 - at / 1.6),
+        at,
+        3000 + Math.random() * 5000,
         "highpass",
+        null,
+        pan + (Math.random() - 0.5) * 0.8,
+        0.002,
       );
+    }
   }
   function soundCheer() {
     tone(784, 0.12, "triangle", 0.035, 0.05);
@@ -250,14 +285,34 @@
     tone(660, 0.17, "sine", 0.06, 0.11);
     tone(880, 0.23, "sine", 0.05, 0.24);
   }
-  function soundTick(n) {
-    tone(n <= 3 ? 780 : 560, 0.095, "square", 0.022);
+  function soundTick(n, pan = 0) {
+    tone(n <= 3 ? 880 : 620, 0.09, "square", n <= 3 ? 0.035 : 0.024, 0, null, pan);
+    if (n <= 3) tone(1320, 0.07, "square", 0.02, 0.12, null, pan);
+    soundFuse(pan);
   }
-  function soundExplosion() {
-    tone(165, 0.42, "sawtooth", 0.095, 0, 38);
-    tone(80, 0.35, "triangle", 0.08, 0.06, 25);
-    for (let i = 0; i < 5; i++)
-      tone(100 + Math.random() * 270, 0.13, "sawtooth", 0.018, i * 0.038, 35);
+  function soundExplosion(pan = 0) {
+    // Cartoon "BOOM": crack, heavy thump, roaring noise, debris rattle.
+    noise(0.09, 0.28, 0, 4200, "highpass", null, pan, 0.002);
+    tone(180, 0.65, "sawtooth", 0.11, 0, 32, pan);
+    tone(95, 1.0, "sine", 0.26, 0, 24, pan);
+    tone(48, 1.2, "sine", 0.2, 0.02, 22, pan);
+    noise(1.3, 0.26, 0, 3200, "lowpass", 70, pan, 0.003);
+    noise(0.6, 0.08, 0.05, 700, "bandpass", 180, pan);
+    for (let i = 0; i < 12; i++)
+      noise(
+        0.04 + Math.random() * 0.06,
+        0.04 + Math.random() * 0.05,
+        0.12 + Math.random() * 0.7,
+        1500 + Math.random() * 3500,
+        "bandpass",
+        null,
+        pan + (Math.random() - 0.5),
+        0.003,
+      );
+    tone(1200, 0.5, "sine", 0.012, 0.15, 1150);
+  }
+  function soundFuse(pan = 0) {
+    noise(0.16, 0.02, 0, 6000, "highpass", null, pan);
   }
   const bgm = new Audio("./assets/audio/Through_the_Garden_Gate.mp3");
   bgm.loop = true;
@@ -913,6 +968,16 @@
     };
     ghost.raf = requestAnimationFrame(step);
   }
+  function setDrawLocked(locked) {
+    document.querySelector(".inline-draw").classList.toggle("locked", locked);
+    for (const button of document.querySelectorAll("#color-cycle, #brush-cycle, #asset-cycle, #clear"))
+      button.disabled = locked;
+    if (locked) {
+      closePalette();
+      closeBrushMenu();
+      closeAssets();
+    }
+  }
   function cancelFloat() {
     clearTimeout(countdownTimer);
     clearInterval(countdownInterval);
@@ -920,6 +985,7 @@
     countdownInterval = null;
     removeFloatGhost();
     draw.parentElement.classList.remove("waiting");
+    setDrawLocked(false);
     $("finish").disabled = false;
   }
   function scheduleFloat() {
@@ -929,6 +995,7 @@
       return toast("えを かいてね");
     countdownEnd = performance.now() + FLOAT_DELAY;
     draw.parentElement.classList.add("waiting");
+    setDrawLocked(true);
     $("finish").disabled = true;
     startFloatGhost();
     const update = () => {
@@ -993,10 +1060,13 @@
       y: (e.clientY - r.top - (r.height - th) / 2) / th,
     };
   }
+  function floatPending() {
+    return countdownTimer !== null;
+  }
   draw.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     startBgm();
-    cancelFloat();
+    if (floatPending()) return;
     if (brushMode === "fill") {
       if (templateIndex) applyTemplateFill(templatePoint(e));
       else fillCurrentArtwork(pt(e));
@@ -1127,6 +1197,9 @@
   }
   function characterRadius(m) {
     return baseCharacterRadius(m) * (m.presentationScale || 1);
+  }
+  function panFor(x) {
+    return w ? (x / w) * 1.4 - 0.7 : 0;
   }
   function worldPoint(e) {
     const r = world.getBoundingClientRect();
@@ -1293,8 +1366,8 @@
     }
     toast("うかべたよ！");
   }
-  $("bomb").onclick = () => {
-    bombMode = !bombMode;
+  function setBombMode(on) {
+    bombMode = on;
     $("bomb").classList.toggle("active", bombMode);
     $("bomb").setAttribute("aria-pressed", String(bombMode));
     $("bomb").setAttribute(
@@ -1302,8 +1375,20 @@
       bombMode ? "爆弾モードをオフ" : "爆弾モードをオン",
     );
     world.style.cursor = bombMode ? "crosshair" : "default";
-    toast(bombMode ? "キャラクターをタップしてね" : "爆弾モードを終了");
-  };
+  }
+  $("bomb").onclick = () => setBombMode(!bombMode);
+  function updateTopButtons() {
+    // Top tools only make sense while at least one character is floating.
+    const empty = monsters.length === 0,
+      busy = photoInProgress || fireworksInProgress;
+    if (empty && bombMode) setBombMode(false);
+    for (const [id, off] of [
+      ["photo", empty || busy],
+      ["fireworks", empty || busy],
+      ["bomb", empty || photoInProgress],
+    ])
+      if ($(id).disabled !== off) $(id).disabled = off;
+  }
   world.addEventListener("pointerdown", (e) => {
     if (photoInProgress || (fireworksInProgress && !bombMode)) return;
     if (e.button !== 0) return;
@@ -1314,7 +1399,7 @@
       if (!m.bombEnd) {
         m.bombEnd = performance.now() + 10000;
         m.lastBombSecond = 11;
-        soundTick(10);
+        soundTick(10, panFor(m.x));
         toast("10秒後に爆発！");
       } else toast("カウントダウン中！");
       return;
@@ -1351,7 +1436,9 @@
   world.addEventListener("pointercancel", (e) => releaseGrab(e, false));
   world.addEventListener("lostpointercapture", (e) => releaseGrab(e, false));
   function explode(m) {
-    soundExplosion();
+    soundExplosion(panFor(m.x));
+    skyFlash = 1;
+    skyFlashColor = "#ffcf6c";
     for (let i = 0; i < 26; i++) {
       const a = Math.random() * Math.PI * 2,
         sp = 35 + Math.random() * 110;
@@ -1463,43 +1550,77 @@
     return fireworkCallWords[Math.floor(Math.random() * fireworkCallWords.length)];
   }
   function drawBombCountdown(ctx, m, remaining, now) {
+    // Frameless badge: a little bomb with a sparking fuse plus the number.
     const danger = remaining <= 3,
-      pulse =
-        1 +
-        Math.sin(now / (danger ? 75 : 150)) * (danger ? 0.1 : 0.035),
-      badgeY = Math.max(20, m.y - characterRadius(m) - 19);
+      pulse = 1.2 * (1 + Math.sin(now / (danger ? 70 : 150)) * (danger ? 0.12 : 0.04)),
+      shake = danger ? Math.sin(now / 28) * 1.6 : 0,
+      badgeY = Math.max(26, m.y - characterRadius(m) - 24),
+      label = String(remaining),
+      textW = label.length * 14;
     ctx.save();
-    ctx.translate(m.x, badgeY);
+    ctx.translate(m.x + shake, badgeY);
     ctx.scale(pulse, pulse);
-    ctx.shadowColor = "#49363855";
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetY = 2;
+    const bx = -textW / 2 - 6,
+      by = 2,
+      br = 11;
+    ctx.translate(bx, by);
+    ctx.rotate(Math.sin(now / 160) * 0.12);
+    // Body with a soft white rim so it reads on day and night skies.
+    ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.moveTo(-22, -14);
-    ctx.lineTo(22, -14);
-    ctx.quadraticCurveTo(28, -14, 28, -8);
-    ctx.lineTo(28, 9);
-    ctx.quadraticCurveTo(28, 15, 22, 15);
-    ctx.lineTo(-22, 15);
-    ctx.quadraticCurveTo(-28, 15, -28, 9);
-    ctx.lineTo(-28, -8);
-    ctx.quadraticCurveTo(-28, -14, -22, -14);
-    ctx.closePath();
-    ctx.fillStyle = danger ? "#fff0e8" : "#fffaf0";
+    ctx.arc(0, 0, br + 2.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowColor = "transparent";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = danger ? "#ec665d" : "#57463f";
+    const body = ctx.createRadialGradient(-4, -4, 1, 0, 0, br);
+    body.addColorStop(0, danger ? "#7a4a52" : "#5a5f7a");
+    body.addColorStop(1, danger ? "#3a1f26" : "#262a3e");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(0, 0, br, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffffb0";
+    ctx.beginPath();
+    ctx.ellipse(-4, -4.5, 3.2, 2, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#8a8fa8";
+    ctx.save();
+    ctx.translate(6, -8);
+    ctx.rotate(0.75);
+    ctx.fillRect(-3.5, -2.5, 7, 5);
+    ctx.restore();
+    ctx.strokeStyle = "#a07a4f";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(8, -10);
+    ctx.quadraticCurveTo(12, -17, 16, -14);
     ctx.stroke();
-    ctx.font = "900 21px system-ui, sans-serif";
+    const flicker = 0.75 + Math.random() * 0.5;
+    ctx.fillStyle = "#ffd34d";
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI * i) / 4 + now / 90,
+        r = (i % 2 ? 2 : 5.5) * flicker;
+      ctx.lineTo(16 + Math.cos(a) * r, -14 + Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#ff7a3d";
+    ctx.beginPath();
+    ctx.arc(16, -14, 1.8 * flicker, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.translate(m.x + shake + 11, badgeY + 1);
+    ctx.scale(pulse * (danger ? 1.12 : 1), pulse * (danger ? 1.12 : 1));
+    ctx.font = '900 26px "Hiragino Maru Gothic ProN", ui-rounded, system-ui, sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 6;
     ctx.strokeStyle = "#fff";
-    ctx.fillStyle = danger ? "#df514f" : "#614832";
-    ctx.strokeText(String(remaining), 0, 1);
-    ctx.fillText(String(remaining), 0, 1);
+    ctx.fillStyle = danger ? "#e3443f" : "#4a3a33";
+    ctx.strokeText(label, 0, 1);
+    ctx.fillText(label, 0, 1);
     ctx.restore();
   }
   function blendHex(dayColor, nightColor, amount) {
@@ -1958,14 +2079,14 @@
           m.fireworkStartAt = now;
           m.fireworkStartX = m.x;
           m.fireworkStartY = m.y;
-          soundRocket();
+          soundRocket(panFor(m.x));
         }
         const duration = 850,
           progress = Math.min(1, (now - m.fireworkStartAt) / duration);
         if (progress >= 1) {
           const order = m.fireworkOrder || 0;
           fireworksBurst(m, fireworkShapes[order % fireworkShapes.length]);
-          soundBurst();
+          soundBurst(panFor(m.x));
           soundCheer();
           fireworkCall(fireworkCallText(order), order);
           monsters.splice(i, 1);
@@ -2036,7 +2157,7 @@
         const remaining = Math.max(0, Math.ceil((m.bombEnd - now) / 1000));
         if (remaining !== m.lastBombSecond) {
           m.lastBombSecond = remaining;
-          soundTick(remaining);
+          soundTick(remaining, panFor(m.x));
         }
         drawBombCountdown(wc, m, remaining, now);
       }
@@ -2087,9 +2208,8 @@
     ) {
       fireworksInProgress = false;
       dayReturnAt = now + 2200;
-      $("photo").disabled = false;
-      $("fireworks").disabled = false;
     }
+    updateTopButtons();
     requestAnimationFrame(frame);
   }
   $("image-input").addEventListener("change", async (e) => {
@@ -2270,8 +2390,6 @@
     const session = ++photoSessionId,
       targets = photoTargets();
     photoInProgress = true;
-    photoButton.disabled = true;
-    fireworksButton.disabled = true;
     if (grabbedMonster) releaseGrab(null, false);
     monsters.forEach((m, index) => {
       m.photoTarget = targets[index];
@@ -2311,8 +2429,6 @@
     hidePhotoStage();
     showPhotoPrint(shot);
     photoInProgress = false;
-    photoButton.disabled = false;
-    fireworksButton.disabled = false;
     for (const m of monsters) {
       m.photoTarget = null;
       m.turnIn = 0.7;
@@ -2324,8 +2440,6 @@
     cancelFloat();
     fireworksInProgress = true;
     fireworksStartedAt = performance.now();
-    photoButton.disabled = true;
-    fireworksButton.disabled = true;
     if (grabbedMonster) releaseGrab(null, false);
     monsters.forEach((m, index) => {
       m.photoTarget = null;
@@ -2347,26 +2461,6 @@
   }
   photoButton.onclick = () => void takePhoto();
   fireworksButton.onclick = startFireworks;
-  $("reset").onclick = () => {
-    cancelFloat();
-    photoSessionId++;
-    photoInProgress = false;
-    fireworksInProgress = false;
-    nightProgress = 0;
-    dayReturnAt = 0;
-    skyFlash = 0;
-    fireworksStartedAt = 0;
-    hidePhotoStage();
-    fireworkCalls.replaceChildren();
-    photoFlash.classList.remove("active");
-    photoButton.disabled = false;
-    fireworksButton.disabled = false;
-    monsters = [];
-    particles = [];
-    grabbedMonster = null;
-    grabbedPointerId = null;
-    world.style.cursor = bombMode ? "crosshair" : "default";
-  };
   resize();
   requestAnimationFrame(frame);
 })();

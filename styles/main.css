@@ -1156,3 +1156,12 @@ button {
     animation: none;
   }
 }
+
+/* --- Drawing area locked during the float countdown --- */
+.inline-draw.locked #draw {
+  pointer-events: none;
+}
+.inline-draw.locked .drawing-tools button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
