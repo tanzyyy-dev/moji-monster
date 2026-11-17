@@ -970,9 +970,10 @@ button {
   transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
   font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", ui-rounded,
     "M PLUS Rounded 1c", "Kosugi Maru", "BIZ UDGothic", system-ui, sans-serif;
-  font-size: clamp(30px, 8.5vw, 60px);
+  font-size: clamp(24px, 8vw, 56px);
   font-weight: 900;
   letter-spacing: 0.02em;
+  max-width: calc(100% - 16px);
   line-height: 1;
   color: var(--fill);
   -webkit-text-stroke: 7px var(--edge);

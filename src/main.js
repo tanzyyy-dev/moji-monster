@@ -122,6 +122,9 @@
     bombMode = false,
     particles = [],
     nightProgress = 0,
+    dayReturnAt = 0,
+    skyFlash = 0,
+    skyFlashColor = "#ffffff",
     photoInProgress = false,
     fireworksInProgress = false,
     fireworksStartedAt = 0,
@@ -1375,7 +1378,10 @@
           max: 1,
           color: colors[i % colors.length],
           r: r + Math.random() * 1.6,
+          glow: true,
         });
+    skyFlash = 1;
+    skyFlashColor = colors[0];
     if (shape === "heart") {
       for (let i = 0; i < 64; i++) {
         const t = (Math.PI * 2 * i) / 64;
@@ -1423,13 +1429,15 @@
   }
   const fireworkCalls = $("firework-calls"),
     fireworkCallWords = ["た〜まや〜！", "か〜ぎや〜！", "どっか〜ん！", "ぱちぱち〜", "きれい〜！", "わ〜い！"];
-  function fireworkCall(text, x, y, variant = 0) {
+  function fireworkCall(text, variant = 0) {
+    // Always just above the drawing area so it stays visible on phones.
     for (const old of fireworkCalls.children) old.classList.add("leaving");
-    const el = document.createElement("div");
+    const el = document.createElement("div"),
+      jitter = Math.min(24, w * 0.05);
     el.className = "firework-call v" + (variant % 4);
-    el.style.left = Math.max(90, Math.min(w - 90, x)) + "px";
-    el.style.top = Math.max(46, Math.min(h - 40, y)) + "px";
-    el.style.setProperty("--tilt", (Math.random() * 10 - 5).toFixed(1) + "deg");
+    el.style.left = w / 2 + (Math.random() * 2 - 1) * jitter + "px";
+    el.style.top = Math.max(h * 0.45, h - Math.min(84, h * 0.16)) + "px";
+    el.style.setProperty("--tilt", (Math.random() * 8 - 4).toFixed(1) + "deg");
     [...text].forEach((ch, i) => {
       const span = document.createElement("span");
       span.textContent = ch === " " ? "\u00a0" : ch;
@@ -1502,7 +1510,7 @@
   }
   function bg(ctx, width = w, height = h, topOffset = 0, totalHeight = height) {
     const dayColors = ["#bfeaf4", "#f2f8e9", "#c5e6a0", "#a9d67f"],
-      nightColors = ["#111d43", "#242b5b", "#27264c", "#18213b"],
+      nightColors = ["#0b1234", "#3a2f6e", "#1f2350", "#161b38"],
       stops = [0, 0.69, 0.7, 1],
       gradient = ctx.createLinearGradient(0, -topOffset, 0, totalHeight - topOffset);
     stops.forEach((stop, index) =>
@@ -1514,7 +1522,7 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.fillStyle = `rgba(255,255,255,${0.44 + nightProgress * 0.5})`;
+    ctx.fillStyle = `rgba(255,255,255,${0.44 * (1 - nightProgress)})`;
     for (let i = 0; i < 8; i++) {
       const x = (i * 157 + 43) % Math.max(width, 1),
         y = 45 + ((i * 73) % Math.max(height * 0.45, 1));
@@ -1549,19 +1557,152 @@
       );
       ctx.fill();
     }
-    if (nightProgress > 0) {
-      for (let i = 0; i < 40; i++) {
-        const x = (i * 173 + 61) % Math.max(width, 1),
-          y = (i * 107 + 19) % Math.max(height * 0.82, 1),
-          twinkle = 0.55 + (Math.sin(tick * 2.4 + i * 1.9) + 1) * 0.2;
-        ctx.globalAlpha = nightProgress * twinkle;
-        ctx.fillStyle = i % 6 === 0 ? "#ffd98a" : "#fff8d8";
-        ctx.beginPath();
-        ctx.arc(x, y, i % 5 === 0 ? 2.2 : 1.25, 0, Math.PI * 2);
-        ctx.fill();
-      }
+    if (nightProgress > 0)
+      drawNightSky(ctx, width, height, totalHeight * 0.7 - topOffset);
+  }
+  function drawNightSky(ctx, width, height, horizonY) {
+    const n = nightProgress,
+      seeded = (i, k) => {
+        const v = Math.sin(i * 127.1 + k * 311.7) * 43758.5453;
+        return v - Math.floor(v);
+      };
+    ctx.save();
+    // Soft nebula clouds and a warm glow above the horizon.
+    for (const [fx, fy, r, color] of [
+      [0.25, 0.22, 0.55, "120,90,200"],
+      [0.78, 0.4, 0.5, "70,120,210"],
+      [0.5, 0.08, 0.4, "180,90,170"],
+    ]) {
+      const g = ctx.createRadialGradient(
+        width * fx, horizonY * fy, 0,
+        width * fx, horizonY * fy, Math.max(width, horizonY) * r,
+      );
+      g.addColorStop(0, `rgba(${color},${0.2 * n})`);
+      g.addColorStop(1, `rgba(${color},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, height);
+    }
+    const glow = ctx.createLinearGradient(0, horizonY - horizonY * 0.4, 0, horizonY);
+    glow.addColorStop(0, "rgba(255,150,190,0)");
+    glow.addColorStop(1, `rgba(255,160,180,${0.3 * n})`);
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, horizonY);
+    if (skyFlash > 0) {
+      ctx.globalAlpha = skyFlash * 0.16 * n;
+      ctx.fillStyle = skyFlashColor;
+      ctx.fillRect(0, 0, width, height);
       ctx.globalAlpha = 1;
     }
+    // Twinkling stars, a few with sparkle crosses.
+    for (let i = 0; i < 90; i++) {
+      const x = seeded(i, 1) * width,
+        y = seeded(i, 2) * horizonY * 0.92,
+        size = 0.7 + seeded(i, 3) ** 3 * 2.2,
+        twinkle = 0.45 + (Math.sin(tick * (1.5 + seeded(i, 4) * 2.5) + i) + 1) * 0.27;
+      ctx.globalAlpha = n * twinkle;
+      ctx.fillStyle = i % 7 === 0 ? "#ffe2a0" : i % 5 === 0 ? "#cfe2ff" : "#fffbea";
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+      if (size > 2.3) {
+        const len = size * 3.2 * twinkle;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - len, y);
+        ctx.lineTo(x + len, y);
+        ctx.moveTo(x, y - len);
+        ctx.lineTo(x, y + len);
+        ctx.stroke();
+      }
+    }
+    // An occasional shooting star.
+    const shoot = (tick % 9) / 1.1;
+    if (shoot < 1) {
+      const lane = Math.floor(tick / 9),
+        sx = width * (0.15 + seeded(lane, 5) * 0.5) + shoot * width * 0.3,
+        sy = horizonY * (0.08 + seeded(lane, 6) * 0.2) + shoot * horizonY * 0.18,
+        tail = ctx.createLinearGradient(sx, sy, sx - 70, sy - 42);
+      tail.addColorStop(0, "rgba(255,255,240,0.95)");
+      tail.addColorStop(1, "rgba(255,255,240,0)");
+      ctx.globalAlpha = n * Math.sin(shoot * Math.PI);
+      ctx.strokeStyle = tail;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - 70, sy - 42);
+      ctx.stroke();
+    }
+    // A sleepy smiling moon.
+    const mr = Math.max(16, Math.min(30, width * 0.055)),
+      mx = width - mr * 2.4,
+      my = Math.max(mr * 1.8, horizonY * 0.14);
+    ctx.globalAlpha = n;
+    const halo = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 3.4);
+    halo.addColorStop(0, "rgba(255,240,190,0.38)");
+    halo.addColorStop(1, "rgba(255,240,190,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(mx, my, mr * 3.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff3c4";
+    ctx.beginPath();
+    ctx.arc(mx, my, mr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f3dc9a";
+    for (const [cx, cy, cr] of [[0.42, -0.4, 0.16], [-0.5, 0.42, 0.12], [0.5, 0.5, 0.09]]) {
+      ctx.beginPath();
+      ctx.arc(mx + cx * mr, my + cy * mr, cr * mr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "#8a6a4a";
+    ctx.lineWidth = Math.max(1.5, mr * 0.08);
+    ctx.lineCap = "round";
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(mx + side * mr * 0.34, my - mr * 0.08, mr * 0.15, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(mx, my + mr * 0.18, mr * 0.2, 0.2 * Math.PI, 0.8 * Math.PI);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,150,150,0.45)";
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(mx + side * mr * 0.58, my + mr * 0.2, mr * 0.14, mr * 0.09, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Rolling hill silhouettes with little warm lights on the horizon.
+    for (const [color, amp, base, freq, offset] of [
+      ["#2d2c63", 22, 26, 0.009, 1.3],
+      ["#1f2350", 14, 8, 0.014, 4.1],
+    ]) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY + 2);
+      for (let x = 0; x <= width + 12; x += 12)
+        ctx.lineTo(
+          x,
+          horizonY - base - Math.sin(x * freq + offset) * amp - Math.sin(x * freq * 2.3 + offset) * amp * 0.35,
+        );
+      ctx.lineTo(width, horizonY + 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    for (let i = 0; i < 9; i++) {
+      const x = (seeded(i, 7) * 0.9 + 0.05) * width,
+        y = horizonY - 6 - seeded(i, 8) * 10,
+        pulse = 0.65 + Math.sin(tick * 2 + i * 2.1) * 0.25,
+        light = ctx.createRadialGradient(x, y, 0, x, y, 9);
+      light.addColorStop(0, `rgba(255,214,130,${0.9 * pulse})`);
+      light.addColorStop(1, "rgba(255,214,130,0)");
+      ctx.fillStyle = light;
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
   function drawSweatDrop(ctx, x, y, size) {
     ctx.beginPath();
@@ -1762,8 +1903,10 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     tick += dt;
-    if (fireworksInProgress)
+    if (fireworksInProgress) {
+      dayReturnAt = 0;
       nightProgress = Math.min(1, nightProgress + dt / 3.2);
+    }
     wc.clearRect(0, 0, w, h);
     bg(wc, w, h, topbar.offsetHeight, app.clientHeight);
     for (let i = monsters.length - 1; i >= 0; i--) {
@@ -1816,7 +1959,7 @@
           fireworksBurst(m, fireworkShapes[order % fireworkShapes.length]);
           soundBurst();
           soundCheer();
-          fireworkCall(fireworkCallText(order), m.x, m.y + 150, order);
+          fireworkCall(fireworkCallText(order), order);
           monsters.splice(i, 1);
           continue;
         }
@@ -1897,22 +2040,45 @@
         particles.splice(i, 1);
         continue;
       }
+      if (p.glow) {
+        // Uniform drag keeps heart/smile shapes intact while they slow down.
+        const drag = Math.exp(-0.6 * dt);
+        p.vx *= drag;
+        p.vy *= drag;
+      }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 90 * dt;
-      wc.globalAlpha = Math.min(1, p.life * 2);
-      wc.fillStyle = p.color;
+      p.vy += (p.glow ? 55 : 90) * dt;
+      const fade = Math.min(1, p.life * 2),
+        flicker = p.glow && p.life < 0.45 && Math.random() < 0.35 ? 0.35 : 1;
+      if (p.glow) {
+        wc.globalCompositeOperation = "lighter";
+        wc.globalAlpha = fade * 0.22 * flicker;
+        wc.fillStyle = p.color;
+        wc.beginPath();
+        wc.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
+        wc.fill();
+      }
+      wc.globalAlpha = fade * flicker;
+      wc.fillStyle = p.glow && p.life > 0.9 ? "#fffdf4" : p.color;
       wc.beginPath();
-      wc.arc(p.x, p.y, p.r * Math.min(1, p.life * 2), 0, Math.PI * 2);
+      wc.arc(p.x, p.y, p.r * fade, 0, Math.PI * 2);
       wc.fill();
+      wc.globalCompositeOperation = "source-over";
     }
     wc.globalAlpha = 1;
+    skyFlash = Math.max(0, skyFlash - dt * 2.4);
+    if (!fireworksInProgress && dayReturnAt && now >= dayReturnAt) {
+      nightProgress = Math.max(0, nightProgress - dt / 3);
+      if (nightProgress <= 0) dayReturnAt = 0;
+    }
     if (
       fireworksInProgress &&
       nightProgress >= 1 &&
       monsters.every((m) => !m.fireworkAt)
     ) {
       fireworksInProgress = false;
+      dayReturnAt = now + 2200;
       $("photo").disabled = false;
       $("fireworks").disabled = false;
     }
@@ -2167,8 +2333,6 @@
       soundPhotoCue();
       fireworkCall(
         monsters.length ? "はなび いくよ〜！" : "おほしさま きらきら〜",
-        w / 2,
-        h * 0.32,
         3,
       );
     }, 1200);
@@ -2181,6 +2345,8 @@
     photoInProgress = false;
     fireworksInProgress = false;
     nightProgress = 0;
+    dayReturnAt = 0;
+    skyFlash = 0;
     fireworksStartedAt = 0;
     hidePhotoStage();
     fireworkCalls.replaceChildren();
