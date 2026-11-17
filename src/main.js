@@ -231,11 +231,17 @@
     fill: "ペンキ",
   };
   const brushModeIcons = {
-    pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.7-.8L19 7.9 16.1 5 5.8 15.3 5 19Z"/><path d="m14.8 6.4 2.8 2.8"/></svg>',
-    thick:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.7-.8L19 7.9 16.1 5 5.8 15.3 5 19Z"/><path d="m14.8 6.4 2.8 2.8"/></svg>',
-    fill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 10 7-7 9 9-7 7-9-9Z"/><path d="m2.5 21 7-7M17 18l-1.5 3h5L19 18"/></svg>',
+    pen: "pencil.svg",
+    thick: "pencil-line.svg",
+    fill: "paint-bucket.svg",
   };
+  function lucideIcon(fileName) {
+    const img = document.createElement("img");
+    img.className = "lucide-icon";
+    img.src = "./assets/icons/" + fileName;
+    img.alt = "";
+    return img;
+  }
   function brushScale() {
     return brushMode === "thick" ? 0.0028 : 0.0014;
   }
@@ -280,7 +286,7 @@
     button.dataset.mode = mode;
     button.setAttribute("aria-label", label);
     button.setAttribute("aria-pressed", String(mode === brushMode));
-    button.innerHTML = brushModeIcons[mode];
+    button.append(lucideIcon(brushModeIcons[mode]));
     button.onclick = () => {
       brushMode = mode;
       updateBrushMenu();
@@ -423,7 +429,7 @@
   uploadOption.type = "button";
   uploadOption.className = "asset-upload-option";
   uploadOption.setAttribute("aria-label", "写真を選ぶ");
-  uploadOption.append(assetCycle.querySelector("svg").cloneNode(true));
+  uploadOption.append(assetCycle.querySelector(".lucide-icon").cloneNode(true));
   uploadOption.onclick = () => {
     closeAssets();
     imageInput.click();

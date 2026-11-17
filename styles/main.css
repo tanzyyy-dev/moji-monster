@@ -239,6 +239,11 @@ header {
   font-size: 24px;
   font-weight: 900;
 }
+.tool .lucide-icon {
+  width: 26px;
+  height: 26px;
+  margin: auto;
+}
 .bottom {
   padding-bottom: max(24px, env(safe-area-inset-bottom));
 }
@@ -397,8 +402,10 @@ header {
   min-width: 46px;
   padding: 7px;
 }
-.inline-draw .secondary[aria-label="書き直す"] svg {
+.inline-draw .secondary[aria-label="書き直す"] .lucide-icon {
   display: block;
+  width: 29px;
+  height: 29px;
 }
 .inline-draw .drawbox {
   position: relative;
@@ -414,6 +421,10 @@ header {
   padding: 4px 8px;
   pointer-events: none;
   color: #6a5c4e;
+}
+.swipe-hint .lucide-icon {
+  width: 26px;
+  height: 26px;
 }
 .inline-draw .draw-controls {
   justify-content: space-between;
@@ -471,7 +482,7 @@ header {
   background: #fff2d9;
   outline: 2px solid #f49a59;
 }
-.palette-mode svg {
+.palette-mode .lucide-icon {
   width: 25px;
   height: 25px;
 }
@@ -528,17 +539,14 @@ button {
   top: 0;
   z-index: 100;
   pointer-events: none;
-  font-size: 29px;
   line-height: 1;
-  color: #ff9e52;
-  text-shadow:
-    0 2px #fff,
-    2px 0 #fff,
-    -2px 0 #fff,
-    0 -2px #fff,
-    0 0 8px #fff;
   transform: translate(-50%, -50%) rotate(-15deg);
   will-change: transform;
+}
+#magic-cursor .lucide-icon {
+  width: 29px;
+  height: 29px;
+  filter: drop-shadow(0 0 4px #fff);
 }
 #pointer-fx {
   position: fixed;
@@ -598,7 +606,9 @@ button {
   justify-content: center;
   padding: 6px !important;
 }
-.asset-cycle svg {
+.asset-cycle .lucide-icon {
+  width: 28px;
+  height: 28px;
   display: block;
   flex-shrink: 0;
 }
@@ -645,7 +655,7 @@ button {
   border-color: #f49a59;
   background: #fff2d9;
 }
-.asset-upload-option svg {
+.asset-upload-option .lucide-icon {
   width: 43px;
   height: 43px;
 }
@@ -666,7 +676,7 @@ button {
   justify-content: center;
   border-radius: 12px;
 }
-.inline-draw .draw-controls .asset-cycle svg {
+.inline-draw .draw-controls .asset-cycle .lucide-icon {
   display: block;
   flex-shrink: 0;
 }
@@ -804,7 +814,7 @@ button {
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.inline-draw .drawbox.waiting .swipe-hint svg {
+.inline-draw .drawbox.waiting .swipe-hint .lucide-icon {
   width: 27px;
   height: 27px;
 }
@@ -866,7 +876,7 @@ button {
 .inline-draw .drawbox.waiting .swipe-hint span {
   font-size: 23px !important;
 }
-.inline-draw .drawbox.waiting .swipe-hint svg {
+.inline-draw .drawbox.waiting .swipe-hint .lucide-icon {
   width: 20px !important;
   height: 20px !important;
 }

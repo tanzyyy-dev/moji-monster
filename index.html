@@ -19,10 +19,14 @@
           aria-pressed="false"
           title="キャラクターを選んで10秒後に爆発"
         >
-          💣
+          <img class="lucide-icon" src="./assets/icons/bomb.svg" alt="" />
         </button>
-        <button id="photo" class="tool" aria-label="写真を保存" title="写真を保存">📷</button>
-        <button id="reset" class="tool" aria-label="はじめから" title="はじめから">↺</button>
+        <button id="photo" class="tool" aria-label="写真を保存" title="写真を保存">
+          <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
+        </button>
+        <button id="reset" class="tool" aria-label="はじめから" title="はじめから">
+          <img class="lucide-icon" src="./assets/icons/rotate-ccw.svg" alt="" />
+        </button>
       </div>
       <main class="world"><canvas id="world"></canvas></main>
       <footer class="bottom">
@@ -30,20 +34,7 @@
           <div class="drawbox">
             <canvas id="draw"></canvas>
             <div class="swipe-hint" aria-live="polite">
-              <svg
-                viewBox="0 0 24 24"
-                width="26"
-                height="26"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="13" r="8" />
-                <path d="M12 9v4l3 2M9 2h6" />
-              </svg>
+              <img class="lucide-icon" src="./assets/icons/timer.svg" alt="" />
               <span id="countdown-number">5</span>
             </div>
           </div>
@@ -72,21 +63,7 @@
                   aria-expanded="false"
                   title="絵を選ぶ"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="28"
-                    height="28"
-                    aria-hidden="true"
-                    fill="none"
-                    stroke="#54453e"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="2.5" y="3" width="19" height="18" rx="3" fill="#fffdf4" />
-                    <circle cx="8.2" cy="8.6" r="2.2" fill="#ffce70" />
-                    <path d="m4.5 17 5.2-5.2 3.4 3.4 2.7-2.8 3.7 4.6" fill="#9cdbac" stroke="#548e6d" />
-                  </svg>
+                  <img class="lucide-icon" src="./assets/icons/image.svg" alt="" />
                 </button>
                 <div
                   id="asset-list"
@@ -103,27 +80,7 @@
                 aria-label="書き直す"
                 title="消しゴム"
               >
-                <svg width="29" height="29" viewBox="0 0 24 24" aria-hidden="true">
-                  <g transform="rotate(-42 12 12)">
-                    <rect
-                      x="5.5"
-                      y="2.5"
-                      width="13"
-                      height="18"
-                      rx="3.2"
-                      fill="#f3f0e9"
-                      stroke="#54453e"
-                      stroke-width="1.6"
-                    />
-                    <path
-                      d="M5.5 12.5h13v4.8a3.2 3.2 0 0 1-3.2 3.2H8.7a3.2 3.2 0 0 1-3.2-3.2z"
-                      fill="#ee8f9d"
-                      stroke="#54453e"
-                      stroke-width="1.6"
-                    />
-                    <path d="M5.5 12.5h13" stroke="#54453e" stroke-width="1.5" />
-                  </g>
-                </svg>
+                <img class="lucide-icon" src="./assets/icons/eraser.svg" alt="" />
               </button>
             </div>
             <button id="finish" class="secondary finish" aria-label="できた">できた</button>
@@ -132,7 +89,9 @@
       </footer>
     </div>
     <div id="toast" class="toast" role="status"></div>
-    <div id="magic-cursor" aria-hidden="true">✦</div>
+    <div id="magic-cursor" aria-hidden="true">
+      <img class="lucide-icon" src="./assets/icons/sparkles.svg" alt="" />
+    </div>
     <div id="pointer-fx" aria-hidden="true"></div>
     <script src="./src/main.js"></script>
   </body>
