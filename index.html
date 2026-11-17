@@ -53,49 +53,49 @@
                 <button
                   id="color-cycle"
                   class="color-cycle"
-                  aria-label="色を変更。長押しで全色を表示"
+                  aria-label="色と描画方法を選ぶ"
                   aria-haspopup="true"
                   aria-expanded="false"
-                  title="タップで次の色・長押しで全色"
+                  title="色と描画方法"
                 ></button>
-                <div id="color-palette" class="color-palette" role="group" aria-label="色を選ぶ" hidden></div>
+                <div id="color-palette" class="color-palette" role="group" aria-label="色と描画方法" hidden>
+                  <div id="palette-modes" class="palette-modes" role="group" aria-label="描画方法"></div>
+                  <div id="palette-colors" class="palette-colors" role="group" aria-label="色"></div>
+                </div>
               </div>
-              <div class="template-picker">
+              <div class="asset-picker">
                 <button
-                  id="template-cycle"
-                  class="secondary template-cycle"
-                  aria-label="塗り絵テンプレートなし。タップで切替、長押しで一覧"
+                  id="asset-cycle"
+                  class="secondary asset-cycle"
+                  aria-label="塗り絵や写真を選ぶ"
                   aria-haspopup="true"
                   aria-expanded="false"
-                  title="タップでテンプレート切替・長押しで一覧"
+                  title="絵を選ぶ"
                 >
-                  ❌
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="28"
+                    height="28"
+                    aria-hidden="true"
+                    fill="none"
+                    stroke="#54453e"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="2.5" y="3" width="19" height="18" rx="3" fill="#fffdf4" />
+                    <circle cx="8.2" cy="8.6" r="2.2" fill="#ffce70" />
+                    <path d="m4.5 17 5.2-5.2 3.4 3.4 2.7-2.8 3.7 4.6" fill="#9cdbac" stroke="#548e6d" />
+                  </svg>
                 </button>
                 <div
-                  id="template-list"
-                  class="template-list"
+                  id="asset-list"
+                  class="asset-list"
                   role="group"
-                  aria-label="塗り絵テンプレートを選ぶ"
+                  aria-label="塗り絵または写真を選ぶ"
                   hidden
                 ></div>
               </div>
-              <button id="upload" class="secondary upload" aria-label="しゃしんをえらぶ" title="しゃしんをえらぶ">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="28"
-                  height="28"
-                  aria-hidden="true"
-                  fill="none"
-                  stroke="#54453e"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <rect x="2.5" y="3" width="19" height="18" rx="3" fill="#fffdf4" />
-                  <circle cx="8.2" cy="8.6" r="2.2" fill="#ffce70" />
-                  <path d="m4.5 17 5.2-5.2 3.4 3.4 2.7-2.8 3.7 4.6" fill="#9cdbac" stroke="#548e6d" />
-                </svg>
-              </button>
               <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
               <button
                 id="clear"

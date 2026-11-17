@@ -337,11 +337,6 @@ header {
   font-size: 18px;
   padding: 8px 10px;
 }
-.inline-draw .upload {
-  font-size: 14px;
-  white-space: nowrap;
-  padding: 8px 9px;
-}
 .inline-draw {
   padding-top: 9px;
 }
@@ -356,10 +351,6 @@ header {
     width: 42px;
     height: 42px;
     min-width: 42px;
-  }
-  .inline-draw .upload {
-    font-size: 12px;
-    padding: 6px;
   }
   .inline-draw .primary {
     font-size: 16px;
@@ -424,10 +415,6 @@ header {
   pointer-events: none;
   color: #6a5c4e;
 }
-.inline-draw .draw-controls .upload {
-  flex: 1;
-  font-size: 16px;
-}
 .inline-draw .draw-controls {
   justify-content: space-between;
 }
@@ -455,8 +442,8 @@ header {
   left: 0;
   bottom: calc(100% + 14px);
   width: min(284px, calc(100vw - 32px));
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   padding: 13px;
   background: #fffaf0;
@@ -465,8 +452,36 @@ header {
   box-shadow: 0 5px 0 #c8b9a1;
   z-index: 9;
 }
+.palette-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.palette-mode {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  background: #fff9e9;
+  border: 2px solid #d4c7b3;
+  border-radius: 12px;
+  color: #55473c;
+}
+.palette-mode[aria-pressed="true"] {
+  border-color: #f49a59;
+  background: #fff2d9;
+  outline: 2px solid #f49a59;
+}
+.palette-mode svg {
+  width: 25px;
+  height: 25px;
+}
+.palette-colors {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
 .palette-swatch {
-  height: 47px;
+  height: 40px;
   width: 100%;
   border: 2px solid #8c8072;
   border-radius: 13px;
@@ -569,23 +584,31 @@ button {
     animation-duration: 0.18s;
   }
 }
-.template-picker {
+.asset-picker {
   position: relative;
   flex-shrink: 0;
 }
-.template-cycle {
+.asset-cycle {
   width: 46px;
   min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px !important;
-  font-size: 25px !important;
 }
-.template-list[hidden] {
+.asset-cycle svg {
+  display: block;
+  flex-shrink: 0;
+}
+.asset-list[hidden] {
   display: none !important;
 }
-.template-list {
+.asset-list {
   position: absolute;
   bottom: calc(100% + 14px);
-  left: -60px;
+  left: -78px;
   width: min(310px, calc(100vw - 25px));
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -597,7 +620,8 @@ button {
   box-shadow: 0 5px #c8b9a1;
   z-index: 10;
 }
-.template-option {
+.template-option,
+.asset-upload-option {
   background: white;
   border: 2px solid #d4c7b3;
   border-radius: 12px;
@@ -621,12 +645,16 @@ button {
   border-color: #f49a59;
   background: #fff2d9;
 }
-.template-cycle {
+.asset-upload-option svg {
+  width: 43px;
+  height: 43px;
+}
+.asset-cycle {
   touch-action: manipulation;
   -webkit-touch-callout: none;
   user-select: none;
 }
-.inline-draw .draw-controls .upload {
+.inline-draw .draw-controls .asset-cycle {
   flex: 0 0 46px !important;
   width: 46px;
   min-width: 46px;
@@ -638,12 +666,12 @@ button {
   justify-content: center;
   border-radius: 12px;
 }
-.inline-draw .draw-controls .upload svg {
+.inline-draw .draw-controls .asset-cycle svg {
   display: block;
   flex-shrink: 0;
 }
 @media (max-width: 350px) {
-  .inline-draw .draw-controls .upload {
+  .inline-draw .draw-controls .asset-cycle {
     flex-basis: 42px !important;
     width: 42px;
     min-width: 42px;
@@ -690,15 +718,14 @@ button {
     padding: 5px 6px;
   }
   .inline-draw .draw-controls .color-cycle,
-  .inline-draw .draw-controls .template-cycle,
-  .inline-draw .draw-controls .upload {
+  .inline-draw .draw-controls .asset-cycle {
     width: 40px;
     min-width: 40px;
     height: 42px;
     min-height: 42px;
   }
 }
-/* Deliberate tool hierarchy: four compact tools together, primary action separated at right. */
+/* Keep drawing tools compact and separate the primary action. */
 .inline-draw .draw-controls {
   display: flex;
   align-items: center;
@@ -713,7 +740,7 @@ button {
   min-width: 0;
 }
 .inline-draw .drawing-tools > .secondary,
-.inline-draw .drawing-tools > .template-picker,
+.inline-draw .drawing-tools > .asset-picker,
 .inline-draw .drawing-tools > .color-picker {
   flex-shrink: 0;
 }
@@ -728,8 +755,7 @@ button {
   justify-content: center;
 }
 .inline-draw .drawing-tools .color-cycle,
-.inline-draw .drawing-tools .template-cycle,
-.inline-draw .drawing-tools .upload {
+.inline-draw .drawing-tools .asset-cycle {
   width: 44px;
   min-width: 44px;
   height: 44px;
@@ -791,8 +817,7 @@ button {
   }
   .inline-draw .drawing-tools #clear,
   .inline-draw .drawing-tools .color-cycle,
-  .inline-draw .drawing-tools .template-cycle,
-  .inline-draw .drawing-tools .upload {
+  .inline-draw .drawing-tools .asset-cycle {
     width: 39px;
     min-width: 39px;
     height: 42px;
@@ -814,8 +839,7 @@ button {
   }
   .inline-draw .drawing-tools #clear,
   .inline-draw .drawing-tools .color-cycle,
-  .inline-draw .drawing-tools .template-cycle,
-  .inline-draw .drawing-tools .upload {
+  .inline-draw .drawing-tools .asset-cycle {
     width: 36px;
     min-width: 36px;
     height: 40px;

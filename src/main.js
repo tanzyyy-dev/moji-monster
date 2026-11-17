@@ -111,6 +111,7 @@
     monsters = [],
     drawing = false,
     pendingImage = null,
+    pendingImageFullCanvas = false,
     floatTimer = null,
     w = 0,
     h = 0,
@@ -220,11 +221,36 @@
   }
   addEventListener("resize", resize);
   const cycle = $("color-cycle"),
-    palette = $("color-palette");
-  let holdTimer = null,
-    holdFired = false,
-    holdStart = null,
-    suppressClick = false;
+    palette = $("color-palette"),
+    paletteModes = $("palette-modes"),
+    paletteColorList = $("palette-colors");
+  let brushMode = "pen";
+  const brushModeNames = {
+    pen: "ペン",
+    thick: "太ペン",
+    fill: "ペンキ",
+  };
+  const brushModeIcons = {
+    pen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.7-.8L19 7.9 16.1 5 5.8 15.3 5 19Z"/><path d="m14.8 6.4 2.8 2.8"/></svg>',
+    thick:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 19 3.7-.8L19 7.9 16.1 5 5.8 15.3 5 19Z"/><path d="m14.8 6.4 2.8 2.8"/></svg>',
+    fill: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 10 7-7 9 9-7 7-9-9Z"/><path d="m2.5 21 7-7M17 18l-1.5 3h5L19 18"/></svg>',
+  };
+  function brushScale() {
+    return brushMode === "thick" ? 0.0028 : 0.0014;
+  }
+  function updateBrushMenu() {
+    for (const button of paletteModes.children)
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.mode === brushMode),
+      );
+    for (const button of paletteColorList.children)
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset.color === color),
+      );
+  }
   function updateCycle() {
     cycle.style.background = color;
     cycle.style.borderColor = color === "#ffffff" ? "#aaa" : "#fff";
@@ -232,7 +258,9 @@
       "aria-label",
       "現在の色：" +
         (paletteColors.find((p) => p[1] === color)?.[0] || "色") +
-        "。タップで次の色、長押しで全色",
+        "、描画方法：" +
+        brushModeNames[brushMode] +
+        "。タップでメニューを開く",
     );
   }
   function closePalette() {
@@ -240,11 +268,27 @@
     cycle.setAttribute("aria-expanded", "false");
   }
   function openPalette() {
+    closeAssets();
     palette.hidden = false;
     cycle.setAttribute("aria-expanded", "true");
-    for (const b of palette.children)
-      b.setAttribute("aria-pressed", String(b.dataset.color === color));
+    updateBrushMenu();
   }
+  Object.entries(brushModeNames).forEach(([mode, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "palette-mode";
+    button.dataset.mode = mode;
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", String(mode === brushMode));
+    button.innerHTML = brushModeIcons[mode];
+    button.onclick = () => {
+      brushMode = mode;
+      updateBrushMenu();
+      updateCycle();
+      closePalette();
+    };
+    paletteModes.append(button);
+  });
   paletteColors.forEach(([name, hex]) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -256,56 +300,16 @@
     b.onclick = () => {
       color = hex;
       updateCycle();
+      updateBrushMenu();
       closePalette();
       renderDrawing();
     };
-    palette.append(b);
+    paletteColorList.append(b);
   });
   updateCycle();
-  cycle.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    holdFired = false;
-    holdStart = { x: e.clientX, y: e.clientY };
-    clearTimeout(holdTimer);
-    holdTimer = setTimeout(() => {
-      holdFired = true;
-      suppressClick = true;
-      openPalette();
-      if (navigator.vibrate) navigator.vibrate(20);
-    }, 480);
-  });
-  cycle.addEventListener("pointermove", (e) => {
-    if (
-      holdStart &&
-      Math.hypot(e.clientX - holdStart.x, e.clientY - holdStart.y) > 12
-    )
-      clearTimeout(holdTimer);
-  });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"])
-    cycle.addEventListener(ev, () => {
-      clearTimeout(holdTimer);
-      holdStart = null;
-    });
-  cycle.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    clearTimeout(holdTimer);
-    holdFired = true;
-    suppressClick = true;
-    openPalette();
-  });
   cycle.onclick = () => {
-    if (suppressClick || holdFired) {
-      suppressClick = false;
-      holdFired = false;
-      return;
-    }
-    if (!palette.hidden) {
-      closePalette();
-      return;
-    }
-    color = colors[(colors.indexOf(color) + 1) % colors.length];
-    updateCycle();
-    renderDrawing();
+    if (palette.hidden) openPalette();
+    else closePalette();
   };
   document.addEventListener("pointerdown", (e) => {
     if (!palette.hidden && !e.target.closest(".color-picker")) closePalette();
@@ -366,41 +370,35 @@
     return img;
   });
   let templateIndex = 0,
-    templateHold = null,
-    templateHoldFired = false,
-    templateSuppress = false;
-  const templateCycle = $("template-cycle"),
-    templateList = $("template-list");
-  function updateTemplate() {
-    templateCycle.textContent = templateDefs[templateIndex][1];
-    templateCycle.setAttribute(
-      "aria-label",
-      "塗り絵：" +
-        templateDefs[templateIndex][0] +
-        "。タップで切替、長押しで一覧",
-    );
-    for (const b of templateList.children)
-      b.setAttribute(
+    templateFills = [];
+  const assetCycle = $("asset-cycle"),
+    assetList = $("asset-list"),
+    imageInput = $("image-input");
+  function updateAssets() {
+    for (const button of assetList.querySelectorAll("[data-template-index]"))
+      button.setAttribute(
         "aria-pressed",
-        String(Number(b.dataset.index) === templateIndex),
+        String(Number(button.dataset.templateIndex) === templateIndex),
       );
-    renderDrawing();
   }
-  function closeTemplates() {
-    templateList.hidden = true;
-    templateCycle.setAttribute("aria-expanded", "false");
+  function closeAssets() {
+    assetList.hidden = true;
+    assetCycle.setAttribute("aria-expanded", "false");
   }
-  function openTemplates() {
+  function openAssets() {
     closePalette();
-    templateList.hidden = false;
-    templateCycle.setAttribute("aria-expanded", "true");
+    updateAssets();
+    assetList.hidden = false;
+    assetCycle.setAttribute("aria-expanded", "true");
   }
-  templateDefs.forEach(([name, emoji], i) => {
+  templateDefs.slice(1).forEach(([name], index) => {
+    const i = index + 1;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "template-option";
-    b.dataset.index = i;
+    b.dataset.templateIndex = i;
     b.setAttribute("aria-label", name);
+    b.setAttribute("aria-pressed", String(i === templateIndex));
     b.innerHTML = templateImages[i]
       ? '<img alt="" src="' +
         templateImages[i].src +
@@ -411,50 +409,171 @@
     b.onclick = () => {
       cancelFloat();
       templateIndex = i;
+      templateFills = [];
       strokes = [];
       pendingImage = null;
-      updateTemplate();
-      closeTemplates();
+      pendingImageFullCanvas = false;
+      updateAssets();
+      renderDrawing();
+      closeAssets();
     };
-    templateList.append(b);
+    assetList.append(b);
   });
-  templateCycle.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    templateHoldFired = false;
-    clearTimeout(templateHold);
-    templateHold = setTimeout(() => {
-      templateHoldFired = true;
-      templateSuppress = true;
-      openTemplates();
-      if (navigator.vibrate) navigator.vibrate(20);
-    }, 480);
-  });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"])
-    templateCycle.addEventListener(ev, () => clearTimeout(templateHold));
-  templateCycle.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    clearTimeout(templateHold);
-    templateHoldFired = true;
-    templateSuppress = true;
-    openTemplates();
-  });
-  templateCycle.onclick = () => {
-    if (templateSuppress || templateHoldFired) {
-      templateSuppress = false;
-      templateHoldFired = false;
-      return;
-    }
-    cancelFloat();
-    templateIndex = (templateIndex + 1) % templateDefs.length;
-    strokes = [];
-    pendingImage = null;
-    updateTemplate();
+  const uploadOption = document.createElement("button");
+  uploadOption.type = "button";
+  uploadOption.className = "asset-upload-option";
+  uploadOption.setAttribute("aria-label", "写真を選ぶ");
+  uploadOption.append(assetCycle.querySelector("svg").cloneNode(true));
+  uploadOption.onclick = () => {
+    closeAssets();
+    imageInput.click();
+  };
+  assetList.append(uploadOption);
+  assetCycle.onclick = () => {
+    if (assetList.hidden) openAssets();
+    else closeAssets();
   };
   document.addEventListener("pointerdown", (e) => {
-    if (!templateList.hidden && !e.target.closest(".template-picker"))
-      closeTemplates();
+    if (!assetList.hidden && !e.target.closest(".asset-picker")) closeAssets();
   });
 
+  function hexRgb(hex) {
+    const value = Number.parseInt(hex.slice(1), 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  }
+  function floodFillCanvas(
+    canvas,
+    x,
+    y,
+    fillColor,
+    { templateOnly = false, allowedColors = [] } = {},
+  ) {
+    const width = canvas.width,
+      height = canvas.height;
+    x = Math.max(0, Math.min(width - 1, Math.floor(x)));
+    y = Math.max(0, Math.min(height - 1, Math.floor(y)));
+    const ctx = canvas.getContext("2d", { willReadFrequently: true }),
+      imageData = ctx.getImageData(0, 0, width, height),
+      pixels = imageData.data,
+      start = y * width + x,
+      startOffset = start * 4,
+      target = [
+        pixels[startOffset],
+        pixels[startOffset + 1],
+        pixels[startOffset + 2],
+        pixels[startOffset + 3],
+      ],
+      whiteRegion =
+        target[3] > 220 &&
+        target[0] > 235 &&
+        target[1] > 235 &&
+        target[2] > 235,
+      allowedRegion = allowedColors.some((hex) => {
+        const rgb = hexRgb(hex);
+        return (
+          target[3] > 220 &&
+          Math.abs(target[0] - rgb[0]) <= 6 &&
+          Math.abs(target[1] - rgb[1]) <= 6 &&
+          Math.abs(target[2] - rgb[2]) <= 6
+        );
+      });
+    if (templateOnly && !whiteRegion && !allowedRegion) return false;
+    const fill = hexRgb(fillColor),
+      transparentTarget = target[3] < 16,
+      tolerance = templateOnly ? (whiteRegion ? 26 : 6) : 24,
+      queue = new Int32Array(width * height),
+      queued = new Uint8Array(width * height);
+    if (
+      !transparentTarget &&
+      Math.abs(target[0] - fill[0]) <= 1 &&
+      Math.abs(target[1] - fill[1]) <= 1 &&
+      Math.abs(target[2] - fill[2]) <= 1
+    ) {
+      return false;
+    }
+    const matches = (index) => {
+      const offset = index * 4;
+      if (transparentTarget) return pixels[offset + 3] < 16;
+      return (
+        pixels[offset + 3] > (templateOnly ? 210 : 16) &&
+        Math.abs(pixels[offset] - target[0]) <= tolerance &&
+        Math.abs(pixels[offset + 1] - target[1]) <= tolerance &&
+        Math.abs(pixels[offset + 2] - target[2]) <= tolerance
+      );
+    };
+    let head = 0,
+      tail = 0,
+      changed = 0;
+    const enqueue = (index) => {
+      if (index >= 0 && !queued[index]) {
+        queued[index] = 1;
+        queue[tail++] = index;
+      }
+    };
+    queue[tail++] = start;
+    queued[start] = 1;
+    while (head < tail) {
+      const index = queue[head++];
+      if (!matches(index)) continue;
+      const offset = index * 4;
+      pixels[offset] = fill[0];
+      pixels[offset + 1] = fill[1];
+      pixels[offset + 2] = fill[2];
+      if (transparentTarget) pixels[offset + 3] = 255;
+      changed++;
+      const px = index % width;
+      if (px > 0) enqueue(index - 1);
+      if (px < width - 1) enqueue(index + 1);
+      if (index >= width) enqueue(index - width);
+      if (index < width * (height - 1)) enqueue(index + width);
+    }
+    if (!changed) return false;
+    ctx.putImageData(imageData, 0, 0);
+    return true;
+  }
+  function applyTemplateFill(point) {
+    if (point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) return;
+    const art = templateArt();
+    if (!art) return;
+    if (
+      floodFillCanvas(
+        art,
+        point.x * art.width,
+        point.y * art.height,
+        color,
+        {
+          templateOnly: true,
+          allowedColors: templateFills.map((fill) => fill.color),
+        },
+      )
+    ) {
+      templateFills.push({ x: point.x, y: point.y, color });
+      renderDrawing();
+    }
+  }
+  function fillCurrentArtwork(point) {
+    const canvas = document.createElement("canvas");
+    canvas.width = draw.width;
+    canvas.height = draw.height;
+    canvas.getContext("2d").drawImage(draw, 0, 0);
+    if (
+      floodFillCanvas(
+        canvas,
+        point.x * canvas.width,
+        point.y * canvas.height,
+        color,
+      )
+    ) {
+      templateIndex = 0;
+      templateFills = [];
+      pendingImage = canvas;
+      pendingImageFullCanvas = true;
+      strokes = [];
+      current = null;
+      updateAssets();
+      renderDrawing();
+    }
+  }
   function templateArt() {
     const img = templateImages[templateIndex];
     if (!img || !img.complete || !img.naturalWidth) return null;
@@ -463,13 +582,54 @@
     c.height = 330;
     const ctx = c.getContext("2d");
     ctx.drawImage(img, 0, 0, c.width, c.height);
+    for (let i = 0; i < templateFills.length; i++) {
+      const fill = templateFills[i];
+      floodFillCanvas(c, fill.x * c.width, fill.y * c.height, fill.color, {
+        templateOnly: true,
+        allowedColors: templateFills.slice(0, i).map((entry) => entry.color),
+      });
+    }
     ctx.save();
     ctx.scale(c.width, c.height);
     for (const p of strokes) {
-      ink(ctx, [p], p.inkColor || color, 0.0014);
+      ink(ctx, [p], p.inkColor || color, p.brushScale || 0.0014);
     }
     ctx.restore();
     return c;
+  }
+  function composeDrawing() {
+    const rect = draw.getBoundingClientRect(),
+      canvas = document.createElement("canvas");
+    canvas.width = draw.width;
+    canvas.height = draw.height;
+    const ctx = canvas.getContext("2d"),
+      scaleX = canvas.width / Math.max(1, rect.width),
+      scaleY = canvas.height / Math.max(1, rect.height);
+    if (pendingImage) {
+      if (pendingImageFullCanvas) {
+        ctx.drawImage(pendingImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        const scale = Math.min(
+            (rect.width - 25) / pendingImage.width,
+            (rect.height - 18) / pendingImage.height,
+          ),
+          imageWidth = pendingImage.width * scale,
+          imageHeight = pendingImage.height * scale;
+        ctx.drawImage(
+          pendingImage,
+          ((rect.width - imageWidth) / 2) * scaleX,
+          ((rect.height - imageHeight) / 2) * scaleY,
+          imageWidth * scaleX,
+          imageHeight * scaleY,
+        );
+      }
+    }
+    ctx.save();
+    ctx.scale(canvas.width, canvas.height);
+    for (const path of strokes)
+      ink(ctx, [path], path.inkColor || color, path.brushScale || 0.0014);
+    ctx.restore();
+    return canvas;
   }
   let countdownTimer = null,
     countdownInterval = null,
@@ -514,9 +674,11 @@
       cancelFloat();
       strokes = [];
       templateIndex = 0;
-      updateTemplate();
+      templateFills = [];
+      updateAssets();
       current = null;
       pendingImage = null;
+      pendingImageFullCanvas = false;
       renderDrawing();
     }
   }
@@ -525,8 +687,11 @@
     strokes = [];
     current = null;
     pendingImage = null;
+    pendingImageFullCanvas = false;
     templateIndex = 0;
-    updateTemplate();
+    templateFills = [];
+    updateAssets();
+    renderDrawing();
   };
   function pt(e) {
     const r = draw.getBoundingClientRect();
@@ -549,14 +714,16 @@
     e.preventDefault();
     startBgm();
     cancelFloat();
+    if (brushMode === "fill") {
+      if (templateIndex) applyTemplateFill(templatePoint(e));
+      else fillCurrentArtwork(pt(e));
+      return;
+    }
     draw.setPointerCapture(e.pointerId);
     drawing = true;
-    if (pendingImage) {
-      pendingImage = null;
-      strokes = [];
-    }
     current = [templateIndex ? templatePoint(e) : pt(e)];
     current.inkColor = color;
+    current.brushScale = brushScale();
     strokes.push(current);
     soundDraw();
     renderDrawing();
@@ -609,21 +776,25 @@
       return;
     }
     if (pendingImage) {
-      const iw = pendingImage.width,
-        ih = pendingImage.height,
-        scale = Math.min((dw - 25) / iw, (dh - 18) / ih);
-      dc.drawImage(
-        pendingImage,
-        (dw - iw * scale) / 2,
-        (dh - ih * scale) / 2,
-        iw * scale,
-        ih * scale,
-      );
-      return;
+      if (pendingImageFullCanvas) {
+        dc.drawImage(pendingImage, 0, 0, dw, dh);
+      } else {
+        const iw = pendingImage.width,
+          ih = pendingImage.height,
+          scale = Math.min((dw - 25) / iw, (dh - 18) / ih);
+        dc.drawImage(
+          pendingImage,
+          (dw - iw * scale) / 2,
+          (dh - ih * scale) / 2,
+          iw * scale,
+          ih * scale,
+        );
+      }
     }
     dc.save();
     dc.scale(dw, dh);
-    for (const path of strokes) ink(dc, [path], path.inkColor || color, 0.0014);
+    for (const path of strokes)
+      ink(dc, [path], path.inkColor || color, path.brushScale || 0.0014);
     dc.restore();
   }
   function bounds(paths) {
@@ -655,12 +826,15 @@
     m.actionStart = tick;
     m.actionUntil = tick + duration;
   }
+  function characterDisplayScale() {
+    return w <= 600 && h > w ? 0.68 : 1;
+  }
   function characterRadius(m) {
     if (m.image) {
       const scale = Math.min(
         Math.min(160, w * 0.4) / m.image.width,
         Math.min(170, h * 0.34) / m.image.height,
-      );
+      ) * characterDisplayScale();
       return Math.max(
         28,
         Math.min(72, Math.max(m.image.width, m.image.height) * scale * 0.45),
@@ -776,10 +950,11 @@
       m = { image: templateArt() };
       if (!m.image) return;
     } else if (pendingImage) {
-      m = { image: pendingImage };
+      m = { image: strokes.length ? composeDrawing() : pendingImage };
     } else {
       const b = bounds(strokes),
-        size = Math.min(90, Math.max(55, w * 0.16)),
+        displayScale = characterDisplayScale(),
+        size = Math.min(90, Math.max(55, w * 0.16)) * displayScale,
         unit = size / Math.max(b.width, b.height),
         cx = (b.minX + b.maxX) / 2,
         cy = (b.minY + b.maxY) / 2;
@@ -789,6 +964,7 @@
           y: (q.y - cy) * unit,
         }));
         path.inkColor = p.inkColor || color;
+        path.brushScale = (p.brushScale || 0.0014) * unit;
         return path;
       });
       m = {
@@ -1024,7 +1200,7 @@
         scale = Math.min(
           Math.min(160, w * 0.4) / iw,
           Math.min(170, h * 0.34) / ih,
-        );
+        ) * characterDisplayScale();
       ctx.drawImage(
         m.image,
         (-iw * scale) / 2,
@@ -1051,7 +1227,8 @@
       );
       ctx.stroke();
     }
-    for (const path of m.paths) ink(ctx, [path], path.inkColor || m.color, 1);
+    for (const path of m.paths)
+      ink(ctx, [path], path.inkColor || m.color, path.brushScale || 1);
     const fy = m.faceY;
     if (action === "relieved" || dancing) {
       ctx.strokeStyle = "#55453f";
@@ -1210,7 +1387,6 @@
     wc.globalAlpha = 1;
     requestAnimationFrame(frame);
   }
-  $("upload").onclick = () => $("image-input").click();
   $("image-input").addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1224,8 +1400,13 @@
       img.onload = () => {
         URL.revokeObjectURL(url);
         cancelFloat();
+        templateIndex = 0;
+        templateFills = [];
         pendingImage = img;
+        pendingImageFullCanvas = false;
         strokes = [];
+        current = null;
+        updateAssets();
         renderDrawing();
       };
       img.onerror = () => {
