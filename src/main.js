@@ -1173,6 +1173,46 @@
       });
     }
   }
+  function drawBombCountdown(ctx, m, remaining, now) {
+    const danger = remaining <= 3,
+      pulse =
+        1 +
+        Math.sin(now / (danger ? 75 : 150)) * (danger ? 0.1 : 0.035),
+      badgeY = Math.max(20, m.y - characterRadius(m) - 19);
+    ctx.save();
+    ctx.translate(m.x, badgeY);
+    ctx.scale(pulse, pulse);
+    ctx.shadowColor = "#49363855";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 2;
+    ctx.beginPath();
+    ctx.moveTo(-22, -14);
+    ctx.lineTo(22, -14);
+    ctx.quadraticCurveTo(28, -14, 28, -8);
+    ctx.lineTo(28, 9);
+    ctx.quadraticCurveTo(28, 15, 22, 15);
+    ctx.lineTo(-22, 15);
+    ctx.quadraticCurveTo(-28, 15, -28, 9);
+    ctx.lineTo(-28, -8);
+    ctx.quadraticCurveTo(-28, -14, -22, -14);
+    ctx.closePath();
+    ctx.fillStyle = danger ? "#fff0e8" : "#fffaf0";
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = danger ? "#ec665d" : "#57463f";
+    ctx.stroke();
+    ctx.font = "900 21px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#fff";
+    ctx.fillStyle = danger ? "#df514f" : "#614832";
+    ctx.strokeText(String(remaining), 0, 1);
+    ctx.fillText(String(remaining), 0, 1);
+    ctx.restore();
+  }
   function blendHex(dayColor, nightColor, amount) {
     const day = hexRgb(dayColor),
       night = hexRgb(nightColor);
@@ -1569,13 +1609,7 @@
           m.lastBombSecond = remaining;
           soundTick(remaining);
         }
-        wc.save();
-        wc.font = "900 22px system-ui";
-        wc.textAlign = "center";
-        wc.lineWidth = 4;
-        wc.strokeStyle = "#513b37";
-        wc.fillStyle = "#fff";
-        wc.restore();
+        drawBombCountdown(wc, m, remaining, now);
       }
     }
     for (let i = particles.length - 1; i >= 0; i--) {
