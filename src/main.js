@@ -2093,8 +2093,12 @@
           continue;
         }
         const eased = 1 - (1 - progress) ** 2,
+          topLimit = Math.min(
+            baseCharacterRadius(m) + 18,
+            Math.max(0, m.fireworkStartY),
+          ),
           targetY = Math.max(
-            12,
+            topLimit,
             Math.min(h * 0.26, m.fireworkStartY - 100),
           );
         m.x = m.fireworkStartX + Math.sin(progress * Math.PI) * 7;
