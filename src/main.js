@@ -791,14 +791,22 @@
     ghost.el.classList.add(landed ? "landed" : "dropped");
     setTimeout(() => ghost.el.remove(), 320);
   }
+  let boundsScratch = null;
   function drawContentBounds() {
     // Find the visible pixels so the ghost lifts from the picture itself.
     const cw = draw.width,
       ch = draw.height;
     if (!cw || !ch) return null;
+    // Scan a CPU-backed copy so the drawing canvas itself stays GPU-friendly.
+    boundsScratch ??= document.createElement("canvas");
+    boundsScratch.width = cw;
+    boundsScratch.height = ch;
+    const sc = boundsScratch.getContext("2d", { willReadFrequently: true });
     let data;
     try {
-      data = dc.getImageData(0, 0, cw, ch).data;
+      sc.clearRect(0, 0, cw, ch);
+      sc.drawImage(draw, 0, 0);
+      data = sc.getImageData(0, 0, cw, ch).data;
     } catch {
       return null;
     }
