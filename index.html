@@ -37,7 +37,14 @@
       </header>
       <main class="world">
         <canvas id="world"></canvas>
-        <div id="photo-message" class="photo-message" aria-live="polite" hidden></div>
+        <div id="firework-calls" class="firework-calls" aria-hidden="true"></div>
+        <div id="photo-stage" class="photo-stage" hidden>
+          <div class="photo-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div id="photo-message" class="photo-bubble" aria-live="polite">
+            <span class="photo-bubble-icon"><img class="lucide-icon" src="./assets/icons/camera.svg" alt="" /></span>
+            <span id="photo-message-text"></span>
+          </div>
+        </div>
         <div id="photo-flash" class="photo-flash" aria-hidden="true"></div>
       </main>
       <footer class="bottom">

@@ -66,35 +66,6 @@ header {
   min-height: 0;
   position: relative;
 }
-.photo-message[hidden] {
-  display: none !important;
-}
-.photo-message {
-  position: absolute;
-  left: 50%;
-  top: 48%;
-  z-index: 5;
-  max-width: calc(100% - 28px);
-  padding: 10px 22px;
-  transform: translate(-50%, -50%);
-  border: 3px solid #6a5145;
-  border-radius: 24px;
-  background: #fff9e9ed;
-  box-shadow: 0 5px #c8b9a1;
-  color: #ef775d;
-  font-family: ui-rounded, "Hiragino Maru Gothic ProN", "M PLUS Rounded 1c", system-ui, sans-serif;
-  font-size: clamp(28px, 7vw, 58px);
-  font-weight: 1000;
-  line-height: 1.2;
-  text-align: center;
-  white-space: nowrap;
-  -webkit-text-stroke: 1px #fff;
-  text-shadow: 0 2px #8c604f;
-  pointer-events: none;
-}
-.photo-message.pop {
-  animation: photo-message-pop 0.24s cubic-bezier(0.2, 1.5, 0.4, 1);
-}
 .photo-flash {
   position: fixed;
   inset: 0;
@@ -105,10 +76,6 @@ header {
 }
 .photo-flash.active {
   animation: photo-flash 0.42s ease-out;
-}
-@keyframes photo-message-pop {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
-  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 @keyframes photo-flash {
   0% { opacity: 0; }
@@ -957,4 +924,234 @@ button {
 .inline-draw .drawbox.waiting .swipe-hint .lucide-icon {
   width: 20px !important;
   height: 20px !important;
+}
+
+/* --- Floating picture during the countdown --- */
+.inline-draw .drawbox #draw {
+  transition: opacity 0.35s ease;
+}
+.inline-draw .drawbox.waiting #draw {
+  opacity: 0.22;
+}
+.float-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 0 6px #fffbe9) drop-shadow(0 6px 8px #6a514533);
+  will-change: transform;
+  transition: opacity 0.3s ease;
+}
+.float-ghost.landed {
+  opacity: 0;
+}
+.float-ghost.dropped {
+  opacity: 0;
+  transition-duration: 0.18s;
+}
+
+/* --- Fireworks calls --- */
+.firework-calls {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.firework-call {
+  --fill: #ff6f91;
+  --edge: #ffffff;
+  --shade: #b8325a;
+  position: absolute;
+  display: flex;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", ui-rounded,
+    "M PLUS Rounded 1c", "Kosugi Maru", "BIZ UDGothic", system-ui, sans-serif;
+  font-size: clamp(30px, 8.5vw, 60px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--fill);
+  -webkit-text-stroke: 7px var(--edge);
+  paint-order: stroke fill;
+  text-shadow:
+    0 4px 0 var(--shade),
+    0 0 18px #fff8;
+  animation: call-life 2.2s ease-out forwards;
+  transition: opacity 0.25s ease;
+}
+.firework-call.leaving {
+  opacity: 0 !important;
+}
+.firework-call.v1 {
+  --fill: #ffb703;
+  --shade: #b86e00;
+}
+.firework-call.v2 {
+  --fill: #36b5e8;
+  --shade: #1f6f9c;
+}
+.firework-call.v3 {
+  --fill: #a46bf5;
+  --shade: #5f34a8;
+}
+.firework-call span {
+  display: inline-block;
+  animation: call-letter 0.55s cubic-bezier(0.3, 1.8, 0.5, 1) both,
+    call-wiggle 0.9s ease-in-out 0.55s infinite;
+  animation-delay: calc(var(--i) * 55ms), calc(0.55s + var(--i) * 70ms);
+}
+@keyframes call-life {
+  0% { opacity: 1; margin-top: 0; }
+  70% { opacity: 1; }
+  100% { opacity: 0; margin-top: -34px; }
+}
+@keyframes call-letter {
+  0% { opacity: 0; transform: translateY(26px) scale(0.2) rotate(-25deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+@keyframes call-wiggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-6px) rotate(6deg); }
+}
+
+/* --- Photo shoot --- */
+.photo-stage[hidden] {
+  display: none !important;
+}
+.photo-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.photo-frame i {
+  position: absolute;
+  width: clamp(34px, 9vw, 58px);
+  height: clamp(34px, 9vw, 58px);
+  border: 0 solid #fffdf6;
+  filter: drop-shadow(0 2px 2px #6a514555);
+  animation: frame-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.photo-frame i:nth-child(1) { left: 12px; top: 12px; border-width: 6px 0 0 6px; border-top-left-radius: 16px; --fx: -14px; --fy: -14px; }
+.photo-frame i:nth-child(2) { right: 12px; top: 12px; border-width: 6px 6px 0 0; border-top-right-radius: 16px; --fx: 14px; --fy: -14px; }
+.photo-frame i:nth-child(3) { left: 12px; bottom: 12px; border-width: 0 0 6px 6px; border-bottom-left-radius: 16px; --fx: -14px; --fy: 14px; }
+.photo-frame i:nth-child(4) { right: 12px; bottom: 12px; border-width: 0 6px 6px 0; border-bottom-right-radius: 16px; --fx: 14px; --fy: 14px; }
+.photo-stage.snap .photo-frame i {
+  animation: frame-snap 0.3s ease-out both;
+}
+@keyframes frame-in {
+  from { opacity: 0; transform: translate(var(--fx), var(--fy)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes frame-snap {
+  0% { transform: none; }
+  40% { transform: translate(calc(var(--fx) * -0.6), calc(var(--fy) * -0.6)); }
+  100% { transform: none; }
+}
+.photo-bubble {
+  --accent: #ff8a5c;
+  position: absolute;
+  left: 50%;
+  top: clamp(18px, 6%, 40px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  padding: 10px 26px 10px 10px;
+  border-radius: 999px;
+  background: #fffdf7;
+  box-shadow:
+    0 0 0 4px var(--accent),
+    0 9px 0 4px #00000014,
+    0 14px 28px #6a514533;
+  color: var(--accent);
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", ui-rounded,
+    "M PLUS Rounded 1c", "Kosugi Maru", system-ui, sans-serif;
+  font-size: clamp(24px, 6.4vw, 44px);
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  transition: box-shadow 0.2s, color 0.2s;
+}
+.photo-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  width: 22px;
+  height: 22px;
+  background: #fffdf7;
+  border-radius: 0 0 6px 0;
+  box-shadow: 4px 4px 0 0 var(--accent);
+  transform: translateX(-50%) rotate(45deg);
+}
+.photo-bubble[data-step="line"] {
+  --accent: #42b3e0;
+}
+.photo-bubble[data-step="cheese"] {
+  --accent: #ff6f9f;
+}
+.photo-bubble-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.45em;
+  height: 1.45em;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: background 0.2s;
+}
+.photo-bubble-icon .lucide-icon {
+  width: 62%;
+  height: 62%;
+  filter: brightness(0) invert(1);
+}
+.photo-bubble[data-step="cheese"] .photo-bubble-icon {
+  animation: cheese-shake 0.35s ease-in-out infinite;
+}
+.photo-bubble.pop {
+  animation: bubble-pop 0.42s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes bubble-pop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.6); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+@keyframes cheese-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-12deg) scale(1.08); }
+  75% { transform: rotate(12deg) scale(1.08); }
+}
+.photo-print {
+  position: fixed;
+  z-index: 45;
+  padding: 10px 10px 34px;
+  background: #fffdf7;
+  border-radius: 6px;
+  box-shadow: 0 12px 30px #3a2a2240, 0 2px 4px #3a2a2233;
+  pointer-events: none;
+  opacity: 0;
+}
+.photo-print-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+}
+#photo.received {
+  animation: camera-receive 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes camera-receive {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25) rotate(-8deg); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .firework-call span {
+    animation: none;
+  }
 }

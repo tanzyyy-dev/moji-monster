@@ -171,6 +171,71 @@
     o.start(t);
     o.stop(t + duration + 0.02);
   }
+  let noiseBuffer = null;
+  function noise(
+    duration = 0.2,
+    volume = 0.05,
+    delay = 0,
+    filterFreq = 1200,
+    filterType = "lowpass",
+    endFilterFreq = null,
+  ) {
+    const c = audio();
+    if (!c) return;
+    if (!noiseBuffer) {
+      noiseBuffer = c.createBuffer(1, c.sampleRate, c.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const t = c.currentTime + delay,
+      src = c.createBufferSource(),
+      filter = c.createBiquadFilter(),
+      g = c.createGain();
+    src.buffer = noiseBuffer;
+    src.loop = true;
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(filterFreq, t);
+    if (endFilterFreq)
+      filter.frequency.exponentialRampToValueAtTime(endFilterFreq, t + duration);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    src.connect(filter).connect(g).connect(c.destination);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + duration + 0.02);
+  }
+  function soundRocket() {
+    tone(520, 0.85, "sine", 0.03, 0, 1500);
+    tone(530, 0.85, "triangle", 0.012, 0.02, 1560);
+    noise(0.7, 0.012, 0, 2400, "bandpass", 5200);
+  }
+  function soundBurst() {
+    tone(130, 0.55, "sine", 0.13, 0, 42);
+    noise(0.6, 0.09, 0, 900, "lowpass", 120);
+    for (let i = 0; i < 14; i++)
+      noise(
+        0.035,
+        0.03 + Math.random() * 0.03,
+        0.22 + Math.random() * 0.9,
+        3500 + Math.random() * 3000,
+        "highpass",
+      );
+  }
+  function soundCheer() {
+    tone(784, 0.12, "triangle", 0.035, 0.05);
+    tone(1047, 0.12, "triangle", 0.035, 0.15);
+    tone(1319, 0.22, "triangle", 0.03, 0.25);
+  }
+  function soundShutter() {
+    noise(0.045, 0.16, 0, 2600, "highpass");
+    tone(1900, 0.03, "square", 0.025, 0);
+    noise(0.07, 0.12, 0.085, 1800, "bandpass");
+    tone(1300, 0.04, "square", 0.02, 0.09);
+  }
+  function soundPhotoCue() {
+    tone(660, 0.09, "sine", 0.035);
+    tone(990, 0.12, "sine", 0.03, 0.08);
+  }
   function soundDraw() {
     const n = performance.now();
     if (n - lastDrawSound < 75) return;
@@ -712,12 +777,137 @@
   }
   let countdownTimer = null,
     countdownInterval = null,
-    countdownEnd = 0;
+    countdownEnd = 0,
+    floatGhost = null;
+  const FLOAT_DELAY = 5000;
+  function removeFloatGhost(landed = false) {
+    if (!floatGhost) return;
+    const ghost = floatGhost;
+    floatGhost = null;
+    cancelAnimationFrame(ghost.raf);
+    ghost.el.classList.add(landed ? "landed" : "dropped");
+    setTimeout(() => ghost.el.remove(), 320);
+  }
+  function drawContentBounds() {
+    // Find the visible pixels so the ghost lifts from the picture itself.
+    const cw = draw.width,
+      ch = draw.height;
+    if (!cw || !ch) return null;
+    let data;
+    try {
+      data = dc.getImageData(0, 0, cw, ch).data;
+    } catch {
+      return null;
+    }
+    let minX = cw,
+      minY = ch,
+      maxX = -1,
+      maxY = -1;
+    for (let y = 0; y < ch; y += 2)
+      for (let x = 0; x < cw; x += 2)
+        if (data[(y * cw + x) * 4 + 3] > 16) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+    if (maxX < 0) return null;
+    return { minX, minY, maxX: maxX + 2, maxY: maxY + 2 };
+  }
+  function floatLandingSize() {
+    const displayScale = characterDisplayScale();
+    if (!templateIndex && !pendingImage)
+      return Math.min(90, Math.max(55, w * 0.16)) * displayScale * 1.15;
+    return (
+      Math.min(Math.min(160, w * 0.4), Math.min(170, h * 0.34)) *
+      displayScale *
+      0.9
+    );
+  }
+  function startFloatGhost() {
+    removeFloatGhost();
+    const box = draw.getBoundingClientRect(),
+      b = drawContentBounds();
+    if (!b || !box.width) return;
+    const ratio = draw.width / box.width,
+      el = document.createElement("canvas"),
+      cropW = b.maxX - b.minX,
+      cropH = b.maxY - b.minY;
+    el.className = "float-ghost";
+    el.width = cropW;
+    el.height = cropH;
+    el.getContext("2d").drawImage(draw, b.minX, b.minY, cropW, cropH, 0, 0, cropW, cropH);
+    const startW = cropW / ratio,
+      startH = cropH / ratio,
+      startX = box.left + b.minX / ratio + startW / 2,
+      startY = box.top + b.minY / ratio + startH / 2,
+      margin = Math.min(80, w * 0.18),
+      landing = {
+        x: margin + Math.random() * Math.max(1, w - margin * 2),
+        y: h * (0.3 + Math.random() * 0.28),
+      },
+      endScale = Math.min(1, floatLandingSize() / Math.max(startW, startH)),
+      sway = (Math.random() < 0.5 ? -1 : 1) * Math.min(60, w * 0.12);
+    el.style.width = startW + "px";
+    el.style.height = startH + "px";
+    document.body.append(el);
+    const ghost = {
+      el,
+      landing,
+      startedAt: performance.now(),
+      raf: 0,
+      nextSparkAt: 0,
+    };
+    floatGhost = ghost;
+    const ease = (p) => 0.5 - Math.cos(Math.PI * p) / 2;
+    const step = (now) => {
+      if (floatGhost !== ghost) return;
+      const t = (now - ghost.startedAt) / 1000,
+        wr = world.getBoundingClientRect(),
+        endX = wr.left + landing.x,
+        endY = wr.top + landing.y;
+      let x = startX,
+        y = startY,
+        scale = 1,
+        rotate = 0,
+        squash = 1;
+      if (t < 0.55) {
+        // Peel off the paper: a little hop with squash and stretch.
+        const p = t / 0.55;
+        y -= Math.sin(p * Math.PI * 0.5) * 18;
+        squash = 1 + Math.sin(p * Math.PI) * 0.12;
+        scale = 1 + p * 0.06;
+        rotate = Math.sin(p * Math.PI * 2) * 4;
+      } else {
+        const p = Math.min(1, (t - 0.55) / 3.9),
+          e = ease(p),
+          fromY = startY - 18;
+        x = startX + (endX - startX) * e + Math.sin(p * Math.PI * 2) * sway * (1 - e);
+        y = fromY + (endY - fromY) * e + Math.sin(t * 4.2) * 6 * (1 - e * 0.6);
+        scale = 1.06 + (endScale - 1.06) * e;
+        rotate = Math.sin(t * 3.1) * (9 - e * 5);
+        squash = 1 + Math.sin(t * 6.3) * 0.035;
+      }
+      el.style.transform =
+        `translate(${x - startW / 2}px, ${y - startH / 2}px) ` +
+        `rotate(${rotate}deg) scale(${scale / squash}, ${scale * squash})`;
+      if (t > 0.3 && now >= ghost.nextSparkAt) {
+        ghost.nextSparkAt = now + 110;
+        sparkle(
+          x + (Math.random() - 0.5) * startW * scale * 0.7,
+          y + startH * scale * 0.4,
+        );
+      }
+      ghost.raf = requestAnimationFrame(step);
+    };
+    ghost.raf = requestAnimationFrame(step);
+  }
   function cancelFloat() {
     clearTimeout(countdownTimer);
     clearInterval(countdownInterval);
     countdownTimer = null;
     countdownInterval = null;
+    removeFloatGhost();
     draw.parentElement.classList.remove("waiting");
     $("finish").disabled = false;
   }
@@ -726,10 +916,10 @@
     cancelFloat();
     if (!strokes.length && !pendingImage && !templateIndex)
       return toast("えを かいてね");
-    countdownEnd = performance.now() + 5000;
+    countdownEnd = performance.now() + FLOAT_DELAY;
     draw.parentElement.classList.add("waiting");
     $("finish").disabled = true;
-    const hint = draw.parentElement.querySelector(".swipe-hint");
+    startFloatGhost();
     const update = () => {
       const n = Math.max(
         0,
@@ -741,9 +931,11 @@
     update();
     countdownInterval = setInterval(update, 1000);
     countdownTimer = setTimeout(() => {
+      const landing = floatGhost?.landing;
+      removeFloatGhost(true);
       cancelFloat();
-      if (!drawing) floatEditor();
-    }, 5000);
+      if (!drawing) floatEditor(landing);
+    }, FLOAT_DELAY);
   }
   $("finish").onclick = () => {
     startBgm();
@@ -1026,7 +1218,7 @@
       }
     }
   }
-  function floatEditor() {
+  function floatEditor(landing = null) {
     if (photoInProgress || fireworksInProgress) return;
     if (!pendingImage && !strokes.length && !templateIndex) return;
     let m;
@@ -1060,8 +1252,12 @@
       };
     }
     Object.assign(m, {
-      x: Math.max(50, Math.random() * Math.max(1, w - 100) + 50),
-      y: Math.max(50, Math.random() * Math.max(1, h - 100) + 50),
+      x: landing
+        ? landing.x
+        : Math.max(50, Math.random() * Math.max(1, w - 100) + 50),
+      y: landing
+        ? landing.y
+        : Math.max(50, Math.random() * Math.max(1, h - 100) + 50),
       vx: (Math.random() - 0.5) * 50,
       vy: (Math.random() - 0.5) * 30,
       turnIn: 1,
@@ -1080,6 +1276,10 @@
     if (monsters.length > 12) monsters.shift();
     show(false);
     soundFloat();
+    if (landing) {
+      const r = world.getBoundingClientRect();
+      sparkle(r.left + m.x, r.top + m.y, true);
+    }
     toast("うかべたよ！");
   }
   $("bomb").onclick = () => {
@@ -1156,22 +1356,95 @@
       });
     }
   }
-  function fireworksBurst(m) {
-    const colors = ["#ffef8a", "#ff8d7e", "#95def4", "#d8a5ff", "#fff7e8"];
-    for (let i = 0; i < 52; i++) {
-      const angle = (Math.PI * 2 * i) / 52 + (Math.random() - 0.5) * 0.12,
-        speed = 55 + Math.random() * 125;
-      particles.push({
-        x: m.x,
-        y: m.y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0.7 + Math.random() * 0.75,
-        max: 1,
-        color: colors[i % colors.length],
-        r: 2 + Math.random() * 4,
-      });
+  const fireworkShapes = ["ring", "heart", "smile", "star"];
+  function fireworksBurst(m, shape = "ring") {
+    const palettes = [
+        ["#ffef8a", "#ff8d7e", "#95def4", "#d8a5ff", "#fff7e8"],
+        ["#ff9ec7", "#ff6f91", "#ffd1e3", "#fff7e8"],
+        ["#ffe066", "#ffc93c", "#fff4b8", "#ffffff"],
+        ["#9be7ff", "#8affc1", "#c9b6ff", "#ffffff"],
+      ],
+      colors = palettes[fireworkShapes.indexOf(shape) % palettes.length] || palettes[0],
+      push = (vx, vy, i, life = 1.15, r = 2.6) =>
+        particles.push({
+          x: m.x,
+          y: m.y,
+          vx,
+          vy,
+          life: life + Math.random() * 0.15,
+          max: 1,
+          color: colors[i % colors.length],
+          r: r + Math.random() * 1.6,
+        });
+    if (shape === "heart") {
+      for (let i = 0; i < 64; i++) {
+        const t = (Math.PI * 2 * i) / 64;
+        push(
+          16 * Math.sin(t) ** 3 * 8.5,
+          -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * 8.5,
+          i,
+        );
+      }
+    } else if (shape === "smile") {
+      // A smiling face: outline, two eyes and a big grin.
+      for (let i = 0; i < 44; i++) {
+        const a = (Math.PI * 2 * i) / 44;
+        push(Math.cos(a) * 140, Math.sin(a) * 140, i);
+      }
+      for (const side of [-1, 1])
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI * 2 * i) / 6;
+          push(side * 48 + Math.cos(a) * 9, -42 + Math.sin(a) * 9, i, 1.15, 3.2);
+        }
+      for (let i = 0; i <= 14; i++) {
+        const a = Math.PI * (0.18 + (0.64 * i) / 14);
+        push(Math.cos(a) * 82, 8 + Math.sin(a) * 62, i, 1.15, 3);
+      }
+    } else if (shape === "star") {
+      for (let i = 0; i < 70; i++) {
+        const t = i / 70,
+          k = (t * 10) | 0,
+          f = t * 10 - k,
+          a1 = -Math.PI / 2 + (Math.PI * k) / 5,
+          a2 = -Math.PI / 2 + (Math.PI * (k + 1)) / 5,
+          r1 = k % 2 ? 60 : 150,
+          r2 = k % 2 ? 150 : 60,
+          r = r1 + (r2 - r1) * f,
+          a = a1 + (a2 - a1) * f;
+        push(Math.cos(a) * r, Math.sin(a) * r, i);
+      }
+    } else {
+      for (let i = 0; i < 52; i++) {
+        const angle = (Math.PI * 2 * i) / 52 + (Math.random() - 0.5) * 0.12,
+          speed = 55 + Math.random() * 125;
+        push(Math.cos(angle) * speed, Math.sin(angle) * speed, i, 0.7 + Math.random() * 0.6, 2 + Math.random() * 2);
+      }
     }
+  }
+  const fireworkCalls = $("firework-calls"),
+    fireworkCallWords = ["た〜まや〜！", "か〜ぎや〜！", "どっか〜ん！", "ぱちぱち〜", "きれい〜！", "わ〜い！"];
+  function fireworkCall(text, x, y, variant = 0) {
+    for (const old of fireworkCalls.children) old.classList.add("leaving");
+    const el = document.createElement("div");
+    el.className = "firework-call v" + (variant % 4);
+    el.style.left = Math.max(90, Math.min(w - 90, x)) + "px";
+    el.style.top = Math.max(46, Math.min(h - 40, y)) + "px";
+    el.style.setProperty("--tilt", (Math.random() * 10 - 5).toFixed(1) + "deg");
+    [...text].forEach((ch, i) => {
+      const span = document.createElement("span");
+      span.textContent = ch === " " ? "\u00a0" : ch;
+      span.style.setProperty("--i", i);
+      el.append(span);
+    });
+    fireworkCalls.append(el);
+    el.addEventListener("animationend", (e) => {
+      if (e.target === el) el.remove();
+    });
+    setTimeout(() => el.remove(), 2600);
+  }
+  function fireworkCallText(index) {
+    if (index < 2) return fireworkCallWords[index];
+    return fireworkCallWords[Math.floor(Math.random() * fireworkCallWords.length)];
   }
   function drawBombCountdown(ctx, m, remaining, now) {
     const danger = remaining <= 3,
@@ -1534,18 +1807,23 @@
           m.fireworkStartAt = now;
           m.fireworkStartX = m.x;
           m.fireworkStartY = m.y;
+          soundRocket();
         }
         const duration = 850,
           progress = Math.min(1, (now - m.fireworkStartAt) / duration);
         if (progress >= 1) {
-          fireworksBurst(m);
+          const order = m.fireworkOrder || 0;
+          fireworksBurst(m, fireworkShapes[order % fireworkShapes.length]);
+          soundBurst();
+          soundCheer();
+          fireworkCall(fireworkCallText(order), m.x, m.y + 150, order);
           monsters.splice(i, 1);
           continue;
         }
         const eased = 1 - (1 - progress) ** 2,
           targetY = Math.max(
             12,
-            Math.min(h * 0.1, m.fireworkStartY - 100),
+            Math.min(h * 0.26, m.fireworkStartY - 100),
           );
         m.x = m.fireworkStartX + Math.sin(progress * Math.PI) * 7;
         m.y = m.fireworkStartY - (m.fireworkStartY - targetY) * eased;
@@ -1674,14 +1952,17 @@
   });
   const photoButton = $("photo"),
     fireworksButton = $("fireworks"),
+    photoStage = $("photo-stage"),
     photoMessage = $("photo-message"),
+    photoMessageText = $("photo-message-text"),
     photoFlash = $("photo-flash");
   function photoTargets() {
     if (!monsters.length) return [];
     const marginX = Math.min(18, w * 0.05),
       marginY = Math.min(22, h * 0.05),
+      bubbleSpace = Math.min(78, h * 0.16),
       areaWidth = Math.max(1, w - marginX * 2),
-      areaHeight = Math.max(1, h - marginY * 2),
+      areaHeight = Math.max(1, h - marginY * 2 - bubbleSpace),
       maxRadius = Math.max(...monsters.map(baseCharacterRadius));
     let best = { columns: 1, scale: 0 };
     for (let columns = 1; columns <= monsters.length; columns++) {
@@ -1702,17 +1983,64 @@
         rowWidth = rowCount * best.cellWidth;
       return {
         x: (w - rowWidth) / 2 + best.cellWidth * (column + 0.5),
-        y: marginY + best.cellHeight * (row + 0.5),
+        y: marginY + bubbleSpace + best.cellHeight * (row + 0.5),
         scale: best.scale,
       };
     });
   }
-  function showPhotoMessage(text) {
-    photoMessage.textContent = text;
-    photoMessage.hidden = false;
+  function showPhotoMessage(text, step) {
+    photoMessageText.textContent = text;
+    photoMessage.dataset.step = step;
+    photoStage.hidden = false;
+    photoStage.classList.remove("snap");
     photoMessage.classList.remove("pop");
     void photoMessage.offsetWidth;
     photoMessage.classList.add("pop");
+  }
+  function hidePhotoStage() {
+    photoStage.hidden = true;
+    photoStage.classList.remove("snap");
+    photoMessage.classList.remove("pop");
+  }
+  function showPhotoPrint(canvas) {
+    const print = document.createElement("div"),
+      target = photoButton.getBoundingClientRect(),
+      size = Math.min(innerWidth * 0.62, innerHeight * 0.48, 340),
+      fromX = innerWidth / 2,
+      fromY = innerHeight * 0.42,
+      dx = target.left + target.width / 2 - fromX,
+      dy = target.top + target.height / 2 - fromY;
+    print.className = "photo-print";
+    print.style.width = size + "px";
+    print.style.left = fromX - size / 2 + "px";
+    print.style.top = fromY - size * 0.56 + "px";
+    canvas.className = "photo-print-image";
+    print.append(canvas);
+    document.body.append(print);
+    if (!print.animate) {
+      setTimeout(() => print.remove(), 1600);
+      return;
+    }
+    const animation = print.animate(
+      [
+        { transform: "scale(0.55) rotate(0deg)", opacity: 0, offset: 0 },
+        { transform: "scale(1.06) rotate(-5deg)", opacity: 1, offset: 0.14 },
+        { transform: "scale(1) rotate(-4deg)", opacity: 1, offset: 0.22 },
+        { transform: "scale(1) rotate(-4deg)", opacity: 1, offset: 0.62 },
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(0.08) rotate(14deg)`,
+          opacity: 0.2,
+          offset: 1,
+        },
+      ],
+      { duration: 1900, easing: "ease-in-out", fill: "forwards" },
+    );
+    animation.onfinish = () => {
+      print.remove();
+      photoButton.classList.remove("received");
+      void photoButton.offsetWidth;
+      photoButton.classList.add("received");
+    };
   }
   function savePhoto() {
     const out = document.createElement("canvas");
@@ -1720,10 +2048,14 @@
     out.height = 1200;
     const c = out.getContext("2d");
     const capturedAt = new Date(),
-      dateLabel = new Intl.DateTimeFormat("ja-JP", {
-        dateStyle: "long",
-        timeStyle: "short",
-      }).format(capturedAt),
+      two = (n) => String(n).padStart(2, "0"),
+      ymd = [
+        capturedAt.getFullYear(),
+        two(capturedAt.getMonth() + 1),
+        two(capturedAt.getDate()),
+      ],
+      hm = [two(capturedAt.getHours()), two(capturedAt.getMinutes())],
+      dateLabel = ymd.join(".") + "  " + hm.join(":"),
       s = Math.min(1080 / Math.max(w, 1), 930 / Math.max(h, 1));
     bg(c, out.width, out.height);
     c.save();
@@ -1748,16 +2080,13 @@
       if (!blob) return;
       const url = URL.createObjectURL(blob),
         a = document.createElement("a"),
-        dateStamp = [
-          capturedAt.getFullYear(),
-          String(capturedAt.getMonth() + 1).padStart(2, "0"),
-          String(capturedAt.getDate()).padStart(2, "0"),
-        ].join("-");
+        dateStamp = ymd.join("") + "-" + hm.join("");
       a.href = url;
       a.download = "ukabete-asobo-" + dateStamp + ".png";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, "image/png");
+    return out;
   }
   const wait = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -1778,11 +2107,13 @@
       m.turnIn = 3;
       m.nextActionAt = Math.max(m.nextActionAt, tick + 3);
     });
-    showPhotoMessage("あつまれ〜");
-    await wait(600);
+    soundPhotoCue();
+    showPhotoMessage("あつまれ〜", "gather");
+    await wait(750);
     if (session !== photoSessionId) return;
-    showPhotoMessage("ならんで〜");
-    await wait(1050);
+    soundPhotoCue();
+    showPhotoMessage("ならんで〜", "line");
+    await wait(1000);
     if (session !== photoSessionId) return;
     for (const m of monsters) {
       if (!m.photoTarget) continue;
@@ -1790,17 +2121,21 @@
       m.y = m.photoTarget.y;
       m.presentationScale = m.photoTarget.scale;
     }
-    showPhotoMessage("はい、チーズ！");
-    await wait(360);
+    tone(880, 0.1, "sine", 0.035);
+    tone(1175, 0.16, "sine", 0.035, 0.09);
+    showPhotoMessage("はい、チーズ！", "cheese");
+    await wait(700);
     if (session !== photoSessionId) return;
+    soundShutter();
+    photoStage.classList.add("snap");
     photoFlash.classList.remove("active");
     void photoFlash.offsetWidth;
     photoFlash.classList.add("active");
-    savePhoto();
-    await wait(420);
+    const shot = savePhoto();
+    await wait(380);
     if (session !== photoSessionId) return;
-    photoMessage.hidden = true;
-    photoMessage.classList.remove("pop");
+    hidePhotoStage();
+    showPhotoPrint(shot);
     photoInProgress = false;
     photoButton.disabled = false;
     fireworksButton.disabled = false;
@@ -1822,9 +2157,21 @@
       m.photoTarget = null;
       m.vx = 0;
       m.vy = 0;
-      m.fireworkAt = fireworksStartedAt + 3200 + index * 1050;
+      m.fireworkAt = fireworksStartedAt + 3200 + index * 1500;
       m.fireworkStartAt = 0;
+      m.fireworkOrder = index;
     });
+    const startedAt = fireworksStartedAt;
+    setTimeout(() => {
+      if (!fireworksInProgress || fireworksStartedAt !== startedAt) return;
+      soundPhotoCue();
+      fireworkCall(
+        monsters.length ? "はなび いくよ〜！" : "おほしさま きらきら〜",
+        w / 2,
+        h * 0.32,
+        3,
+      );
+    }, 1200);
   }
   photoButton.onclick = () => void takePhoto();
   fireworksButton.onclick = startFireworks;
@@ -1835,8 +2182,8 @@
     fireworksInProgress = false;
     nightProgress = 0;
     fireworksStartedAt = 0;
-    photoMessage.hidden = true;
-    photoMessage.classList.remove("pop");
+    hidePhotoStage();
+    fireworkCalls.replaceChildren();
     photoFlash.classList.remove("active");
     photoButton.disabled = false;
     fireworksButton.disabled = false;
