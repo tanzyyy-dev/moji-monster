@@ -365,8 +365,7 @@
     img.onload = () => renderDrawing();
     return img;
   });
-  let templateFills = [],
-    templateIndex = 0,
+  let templateIndex = 0,
     templateHold = null,
     templateHoldFired = false,
     templateSuppress = false;
@@ -412,7 +411,6 @@
     b.onclick = () => {
       cancelFloat();
       templateIndex = i;
-      templateFills = [];
       strokes = [];
       pendingImage = null;
       updateTemplate();
@@ -448,7 +446,6 @@
     }
     cancelFloat();
     templateIndex = (templateIndex + 1) % templateDefs.length;
-    templateFills = [];
     strokes = [];
     pendingImage = null;
     updateTemplate();
@@ -467,12 +464,9 @@
     const ctx = c.getContext("2d");
     ctx.drawImage(img, 0, 0, c.width, c.height);
     ctx.save();
-    ctx.scale(3, 3);
+    ctx.scale(c.width, c.height);
     for (const p of strokes) {
-      ctx.save();
-      ctx.scale(120, 110);
-      ink(ctx, [p], p.inkColor || color, 0.42);
-      ctx.restore();
+      ink(ctx, [p], p.inkColor || color, 0.0014);
     }
     ctx.restore();
     return c;
@@ -519,7 +513,6 @@
     if (!v) {
       cancelFloat();
       strokes = [];
-      templateFills = [];
       templateIndex = 0;
       updateTemplate();
       current = null;
@@ -530,10 +523,10 @@
   $("clear").onclick = () => {
     cancelFloat();
     strokes = [];
-    templateFills = [];
     current = null;
     pendingImage = null;
-    renderDrawing();
+    templateIndex = 0;
+    updateTemplate();
   };
   function pt(e) {
     const r = draw.getBoundingClientRect();
