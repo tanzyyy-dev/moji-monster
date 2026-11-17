@@ -118,6 +118,13 @@
     tick = 0,
     bombMode = false,
     particles = [];
+  let grabbedMonster = null,
+    grabbedPointerId = null,
+    grabOffsetX = 0,
+    grabOffsetY = 0,
+    lastGrabX = 0,
+    lastGrabY = 0,
+    lastGrabAt = 0;
   let audioCtx = null,
     lastDrawSound = 0;
   function audio() {
@@ -650,6 +657,125 @@
   function toast(t) {
     /* Playground stays text-free; no unsolicited overlays. */
   }
+  function setCharacterAction(m, action, duration) {
+    m.action = action;
+    m.actionStart = tick;
+    m.actionUntil = tick + duration;
+  }
+  function characterRadius(m) {
+    if (m.image) {
+      const scale = Math.min(
+        Math.min(160, w * 0.4) / m.image.width,
+        Math.min(170, h * 0.34) / m.image.height,
+      );
+      return Math.max(
+        28,
+        Math.min(72, Math.max(m.image.width, m.image.height) * scale * 0.45),
+      );
+    }
+    return Math.max(28, (m.size || 75) * 0.54);
+  }
+  function worldPoint(e) {
+    const r = world.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function characterAt(x, y) {
+    for (let i = monsters.length - 1; i >= 0; i--) {
+      const m = monsters[i],
+        bob = Math.sin(tick * 3 + m.phase) * 5,
+        hitRadius = characterRadius(m) * (m.image ? 1.12 : 1.3);
+      if (Math.hypot(x - m.x, y - (m.y + bob)) <= hitRadius) return m;
+    }
+    return null;
+  }
+  function placeCharacter(m, x, y) {
+    const radius = Math.min(
+      characterRadius(m),
+      Math.max(18, Math.min(w, h) * 0.42),
+    );
+    m.x = Math.max(radius, Math.min(Math.max(radius, w - radius), x));
+    m.y = Math.max(radius, Math.min(Math.max(radius, h - radius), y));
+  }
+  function moveGrabbedCharacter(e) {
+    if (!grabbedMonster || e.pointerId !== grabbedPointerId) return;
+    e.preventDefault();
+    const point = worldPoint(e),
+      now = performance.now(),
+      dt = Math.max(0.016, (now - lastGrabAt) / 1000),
+      vx = (point.x - lastGrabX) / dt,
+      vy = (point.y - lastGrabY) / dt;
+    placeCharacter(
+      grabbedMonster,
+      point.x + grabOffsetX,
+      point.y + grabOffsetY,
+    );
+    grabbedMonster.dragVX = Math.max(
+      -150,
+      Math.min(150, grabbedMonster.dragVX * 0.45 + vx * 0.55),
+    );
+    grabbedMonster.dragVY = Math.max(
+      -150,
+      Math.min(150, grabbedMonster.dragVY * 0.45 + vy * 0.55),
+    );
+    grabbedMonster.vx = 0;
+    grabbedMonster.vy = 0;
+    lastGrabX = point.x;
+    lastGrabY = point.y;
+    lastGrabAt = now;
+  }
+  function releaseGrab(e, keepMomentum = true) {
+    if (!grabbedMonster || (e && e.pointerId !== grabbedPointerId)) return;
+    const m = grabbedMonster;
+    grabbedMonster = null;
+    grabbedPointerId = null;
+    m.vx = keepMomentum ? m.dragVX * 0.45 : 0;
+    m.vy = keepMomentum ? m.dragVY * 0.45 : 0;
+    m.turnIn = 1.2;
+    m.nextActionAt = Math.max(m.nextActionAt, tick + 2.5);
+    m.sweatUntil = tick + 0.35;
+    setCharacterAction(m, "relieved", 0.8);
+    world.style.cursor = bombMode ? "crosshair" : "default";
+  }
+  function avoidNearCollisions() {
+    for (let i = 0; i < monsters.length; i++) {
+      const a = monsters[i];
+      if (a === grabbedMonster || a.bombEnd) continue;
+      for (let j = i + 1; j < monsters.length; j++) {
+        const b = monsters[j];
+        if (b === grabbedMonster || b.bombEnd) continue;
+        const dx = b.x - a.x,
+          dy = b.y - a.y,
+          rawDistance = Math.hypot(dx, dy),
+          distance = Math.max(1, rawDistance),
+          radiusSum = characterRadius(a) + characterRadius(b),
+          closing = (b.vx - a.vx) * dx + (b.vy - a.vy) * dy < 0;
+        if (
+          distance > radiusSum + 18 ||
+          (!closing && distance > radiusSum * 0.88) ||
+          tick < a.reactionCooldown ||
+          tick < b.reactionCooldown
+        ) {
+          continue;
+        }
+        const nx = rawDistance ? dx / distance : Math.cos(a.phase - b.phase),
+          ny = rawDistance ? dy / distance : Math.sin(a.phase - b.phase),
+          kick = 70 + Math.random() * 35,
+          mood = Math.random() < 0.5 ? "panic" : "angry";
+        a.vx = -nx * kick - ny * 18;
+        a.vy = -ny * kick + nx * 18;
+        b.vx = nx * kick + ny * 18;
+        b.vy = ny * kick - nx * 18;
+        a.turnIn = 1.2;
+        b.turnIn = 1.2;
+        a.reactionCooldown = tick + 1.15;
+        b.reactionCooldown = tick + 1.15;
+        a.nextActionAt = tick + 3 + Math.random() * 3;
+        b.nextActionAt = a.nextActionAt;
+        setCharacterAction(a, mood, 0.85);
+        setCharacterAction(b, mood === "panic" ? "angry" : "panic", 0.85);
+      }
+    }
+  }
   function floatEditor() {
     if (!pendingImage && !strokes.length && !templateIndex) return;
     let m;
@@ -688,6 +814,14 @@
       turnIn: 1,
       phase: Math.random() * 6.28,
       age: 0,
+      action: "",
+      actionStart: 0,
+      actionUntil: 0,
+      nextActionAt: tick + 2.5 + Math.random() * 3.5,
+      reactionCooldown: 0,
+      sweatUntil: 0,
+      dragVX: 0,
+      dragVY: 0,
     });
     monsters.push(m);
     if (monsters.length > 12) monsters.shift();
@@ -707,26 +841,50 @@
     toast(bombMode ? "キャラクターをタップしてね" : "爆弾モードを終了");
   };
   world.addEventListener("pointerdown", (e) => {
-    if (!bombMode) return;
-    const r = world.getBoundingClientRect(),
-      x = e.clientX - r.left,
-      y = e.clientY - r.top;
-    for (let i = monsters.length - 1; i >= 0; i--) {
-      const m = monsters[i],
-        radius = m.image
-          ? Math.min(85, w * 0.22)
-          : Math.max(42, (m.size || 75) * 0.65);
-      if (Math.hypot(x - m.x, y - m.y) < radius) {
-        if (!m.bombEnd) {
-          m.bombEnd = performance.now() + 10000;
-          m.lastBombSecond = 11;
-          soundTick(10);
-          toast("10秒後に爆発！");
-        } else toast("カウントダウン中！");
-        break;
-      }
+    if (e.button !== 0) return;
+    const point = worldPoint(e),
+      m = characterAt(point.x, point.y);
+    if (bombMode) {
+      if (!m) return;
+      if (!m.bombEnd) {
+        m.bombEnd = performance.now() + 10000;
+        m.lastBombSecond = 11;
+        soundTick(10);
+        toast("10秒後に爆発！");
+      } else toast("カウントダウン中！");
+      return;
+    }
+    if (!m) return;
+    e.preventDefault();
+    grabbedMonster = m;
+    grabbedPointerId = e.pointerId;
+    grabOffsetX = m.x - point.x;
+    grabOffsetY = m.y - point.y;
+    lastGrabX = point.x;
+    lastGrabY = point.y;
+    lastGrabAt = performance.now();
+    m.dragVX = 0;
+    m.dragVY = 0;
+    m.vx = 0;
+    m.vy = 0;
+    m.sweatUntil = tick + 0.45;
+    setCharacterAction(m, "sweat", 0.5);
+    world.setPointerCapture(e.pointerId);
+    world.style.cursor = "grabbing";
+  });
+  world.addEventListener("pointermove", (e) => {
+    if (grabbedMonster && e.pointerId === grabbedPointerId) {
+      moveGrabbedCharacter(e);
+      return;
+    }
+    if (!bombMode) {
+      const point = worldPoint(e);
+      world.style.cursor = characterAt(point.x, point.y) ? "grab" : "default";
     }
   });
+  world.addEventListener("pointerup", (e) => releaseGrab(e));
+  world.addEventListener("pointercancel", (e) => releaseGrab(e, false));
+  world.addEventListener("lostpointercapture", (e) => releaseGrab(e, false));
   function explode(m) {
     soundExplosion();
     for (let i = 0; i < 26; i++) {
@@ -781,13 +939,91 @@
       ctx.fill();
     }
   }
+  function drawSweatDrop(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.bezierCurveTo(x + size * 0.9, y, x + size * 0.7, y + size, x, y + size);
+    ctx.bezierCurveTo(x - size * 0.7, y + size, x - size * 0.9, y, x, y - size);
+    ctx.fillStyle = "#76cfe3";
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#fffaf0";
+    ctx.stroke();
+  }
+  function drawActionStar(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size * 0.32, y - size * 0.32);
+    ctx.lineTo(x + size, y);
+    ctx.lineTo(x + size * 0.32, y + size * 0.32);
+    ctx.lineTo(x, y + size);
+    ctx.lineTo(x - size * 0.32, y + size * 0.32);
+    ctx.lineTo(x - size, y);
+    ctx.lineTo(x - size * 0.32, y - size * 0.32);
+    ctx.closePath();
+    ctx.fill();
+  }
+  function drawActionEffects(ctx, m, t, action) {
+    const size = characterRadius(m) * 1.6;
+    if (m === grabbedMonster || action === "sweat" || t < m.sweatUntil) {
+      const flutter = Math.sin(t * 15 + m.phase) * 2;
+      drawSweatDrop(ctx, -size * 0.52, -size * 0.45 + flutter, 4.5);
+      drawSweatDrop(ctx, size * 0.5, -size * 0.56 - flutter, 3.5);
+    }
+    if (action === "panic") {
+      ctx.font = `900 ${Math.max(15, size * 0.38)}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#fffaf0";
+      ctx.strokeText("!", size * 0.48, -size * 0.38);
+      ctx.fillStyle = "#ff7c7b";
+      ctx.fillText("!", size * 0.48, -size * 0.38);
+    } else if (action === "angry") {
+      ctx.save();
+      ctx.translate(size * 0.43, -size * 0.43);
+      ctx.rotate(-0.2);
+      ctx.strokeStyle = "#ef6d62";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-5, -8);
+      ctx.lineTo(0, -3);
+      ctx.lineTo(6, -8);
+      ctx.moveTo(0, -3);
+      ctx.lineTo(0, 4);
+      ctx.moveTo(-7, 2);
+      ctx.lineTo(-3, 6);
+      ctx.moveTo(7, 2);
+      ctx.lineTo(3, 6);
+      ctx.stroke();
+      ctx.restore();
+    } else if (action === "dance") {
+      const twinkle = 0.6 + Math.sin(t * 13 + m.phase) * 0.4;
+      ctx.fillStyle = `rgba(255, 201, 78, ${twinkle})`;
+      drawActionStar(ctx, -size * 0.64, -size * 0.28, 4);
+      drawActionStar(ctx, size * 0.64, -size * 0.12, 3.5);
+    }
+  }
   function monster(ctx, m, t) {
-    const bob = Math.sin(t * 3 + m.phase) * 5;
+    const action =
+        m === grabbedMonster ? "sweat" : t < m.actionUntil ? m.action : "",
+      actionProgress = action
+        ? Math.min(1, (t - m.actionStart) / (m.actionUntil - m.actionStart))
+        : 0,
+      jumpHeight =
+        action === "jump" ? Math.sin(actionProgress * Math.PI) * 20 : 0,
+      bob = Math.sin(t * 3 + m.phase) * 5 - jumpHeight,
+      dancing = action === "dance",
+      grabbed = m === grabbedMonster,
+      bounce = dancing
+        ? 1 + Math.sin(t * 12 + m.phase) * 0.1
+        : 1 + Math.sin(t * 3 + m.phase) * 0.035,
+      twist = dancing ? Math.sin(t * 10 + m.phase) * 0.16 : 0;
     ctx.save();
     ctx.translate(m.x, m.y + bob);
-    const bounce = 1 + Math.sin(t * 3 + m.phase) * 0.035;
-    ctx.scale(1 / bounce, bounce);
-    ctx.rotate(Math.sin(t * 1.7 + m.phase) * 0.055);
+    ctx.scale((grabbed ? 1.06 : 1) / bounce, bounce / (grabbed ? 1.04 : 1));
+    ctx.rotate(Math.sin(t * 1.7 + m.phase) * 0.055 + twist);
     ctx.globalAlpha = Math.min(1, m.age * 3);
     if (m.image) {
       const iw = m.image.width,
@@ -803,6 +1039,7 @@
         iw * scale,
         ih * scale,
       );
+      drawActionEffects(ctx, m, t, action);
       ctx.restore();
       return;
     }
@@ -823,31 +1060,73 @@
     }
     for (const path of m.paths) ink(ctx, [path], path.inkColor || m.color, 1);
     const fy = m.faceY;
-    ctx.fillStyle = "#fff";
-    ctx.strokeStyle = "#55453f";
-    ctx.lineWidth = 2.5;
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.ellipse(s * m.eyeOffset, fy, 9, 11, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#322c32";
-      ctx.beginPath();
-      ctx.arc(
-        s * m.eyeOffset + Math.sin(t * 0.8 + m.phase) * 2,
-        fy + 1,
-        4,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fill();
+    if (action === "relieved" || dancing) {
+      ctx.strokeStyle = "#55453f";
+      ctx.lineWidth = 2.5;
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(s * m.eyeOffset - 4, fy);
+        ctx.quadraticCurveTo(s * m.eyeOffset, fy + 4, s * m.eyeOffset + 4, fy);
+        ctx.stroke();
+      }
+    } else {
       ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#55453f";
+      ctx.lineWidth = 2.5;
+      const eyeScale = action === "panic" || action === "sweat" ? 1.12 : 1;
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(
+          s * m.eyeOffset,
+          fy,
+          9 * eyeScale,
+          11 * eyeScale,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#322c32";
+        ctx.beginPath();
+        ctx.arc(
+          s * m.eyeOffset + Math.sin(t * 0.8 + m.phase) * 2,
+          fy + 1,
+          action === "panic" ? 3.3 : 4,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+      }
+    }
+    if (action === "angry") {
+      ctx.strokeStyle = "#51443e";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-m.eyeOffset - 5, fy - 14);
+      ctx.lineTo(-m.eyeOffset + 3, fy - 10);
+      ctx.moveTo(m.eyeOffset - 3, fy - 10);
+      ctx.lineTo(m.eyeOffset + 5, fy - 14);
+      ctx.stroke();
     }
     ctx.strokeStyle = "#493638";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.arc(0, fy + 15, 5, 0, Math.PI);
-    ctx.stroke();
+    if (action === "panic") {
+      ctx.arc(0, fy + 18, 3.5, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (action === "angry") {
+      ctx.moveTo(-5, fy + 19);
+      ctx.lineTo(0, fy + 16);
+      ctx.lineTo(5, fy + 19);
+      ctx.stroke();
+    } else {
+      ctx.arc(0, fy + 15, 5, 0, Math.PI);
+      ctx.stroke();
+    }
+    drawActionEffects(ctx, m, t, action);
     ctx.restore();
   }
   function frame(now) {
@@ -864,6 +1143,11 @@
         continue;
       }
       m.age += dt;
+      if (m === grabbedMonster) {
+        m.vx = 0;
+        m.vy = 0;
+        continue;
+      }
       m.turnIn -= dt;
       if (m.turnIn <= 0) {
         m.turnIn = 0.4 + Math.random() * 2.8;
@@ -890,6 +1174,14 @@
         m.y = h - 40;
         m.vy = -Math.abs(m.vy);
       }
+      if (!m.bombEnd && tick >= m.nextActionAt && tick >= m.actionUntil) {
+        const action = Math.random() < 0.5 ? "jump" : "dance";
+        setCharacterAction(m, action, action === "jump" ? 0.85 : 1.35);
+        m.nextActionAt = tick + 4 + Math.random() * 5;
+      }
+    }
+    avoidNearCollisions();
+    for (const m of monsters) {
       monster(wc, m, tick);
       if (m.bombEnd) {
         const remaining = Math.max(0, Math.ceil((m.bombEnd - now) / 1000));
