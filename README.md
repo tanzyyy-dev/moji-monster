@@ -24,7 +24,8 @@ python3 -m http.server 8000
 ```text
 .
 ├── assets/
-│   └── audio/       BGM
+│   ├── audio/       BGM
+│   └── favicon.svg  空に浮かぶ絵と文字のアイコン
 ├── docs/            素材の出典と記録
 ├── src/             ゲームのJavaScript
 ├── styles/          ゲームのCSS

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfeaf4" />
+      <stop offset="1" stop-color="#f2f8e9" />
+    </linearGradient>
+    <clipPath id="tile">
+      <rect x="2" y="2" width="60" height="60" rx="17" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#tile)">
+    <rect width="64" height="64" fill="url(#sky)" />
+    <path d="M0 53c10-5 19-3 29-1 11 2 22-7 35-2v14H0z" fill="#a9d67f" />
+
+    <path
+      d="m12 16 1.7 3.5 3.8.5-2.8 2.6.7 3.8-3.4-1.9-3.4 1.9.7-3.8-2.8-2.6 3.8-.5z"
+      fill="#ffcf62"
+      stroke="#665044"
+      stroke-linejoin="round"
+      stroke-width="1.4"
+    />
+
+    <path
+      d="M16 40c-1.8-4 .1-8.2 3.2-10.1.5-4 4.2-6.7 8.2-5.9 3-3.5 8.8-3.2 11.3.5 4.7.1 8 4.1 7.1 8.5 2.1 4.3-.9 9-5.7 9.3-3.5 3.2-9.2 2.9-12-.2-5.1 1.4-10.3 1-12.1-2.1Z"
+      fill="#fffaf0"
+      stroke="#51443e"
+      stroke-linejoin="round"
+      stroke-width="2.3"
+    />
+    <ellipse cx="25.5" cy="35" rx="1.7" ry="2.2" fill="#40352f" />
+    <ellipse cx="36.5" cy="35" rx="1.7" ry="2.2" fill="#40352f" />
+    <path d="M28.5 39.4q3 3.1 6 0" fill="none" stroke="#51443e" stroke-linecap="round" stroke-width="1.7" />
+    <path d="m20 43-1.3 2.2m20.1-2.2 1.3 2.2" fill="none" stroke="#51443e" stroke-linecap="round" stroke-width="1.8" />
+
+    <text
+      x="42"
+      y="22"
+      fill="#ff7c7b"
+      font-family="system-ui, sans-serif"
+      font-size="16"
+      font-weight="900"
+      paint-order="stroke"
+      stroke="#fffaf0"
+      stroke-linejoin="round"
+      stroke-width="2.5"
+    >
+      あ
+    </text>
+  </g>
+
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="none" stroke="#51443e" stroke-width="2" />
+</svg>
