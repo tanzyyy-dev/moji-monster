@@ -153,7 +153,10 @@
     grabOffsetY = 0,
     lastGrabX = 0,
     lastGrabY = 0,
-    lastGrabAt = 0;
+    lastGrabAt = 0,
+    grabbedPrevX = 0,
+    grabbedPrevY = 0,
+    grabbedPrevAt = 0;
   let audioCtx = null,
     lastDrawSound = 0;
   function audio() {
@@ -1266,6 +1269,7 @@
     lastGrabX = point.x;
     lastGrabY = point.y;
     lastGrabAt = now;
+    if (!photoInProgress && !fireworksInProgress) avoidNearCollisions();
   }
   function releaseGrab(e, keepMomentum = true) {
     if (!grabbedMonster || (e && e.pointerId !== grabbedPointerId)) return;
@@ -1317,6 +1321,48 @@
         b.nextActionAt = a.nextActionAt;
         setCharacterAction(a, mood, 0.85);
         setCharacterAction(b, mood === "panic" ? "angry" : "panic", 0.85);
+      }
+    }
+    // A held character is also part of proximity checks: only the
+    // unheld characters are allowed to flee from it.
+    if (grabbedMonster && !grabbedMonster.bombEnd) {
+      const g = grabbedMonster,
+        nowTime = performance.now(),
+        elapsed = Math.max(0.016, (nowTime - grabbedPrevAt) / 1000),
+        gvx = (g.x - grabbedPrevX) / elapsed,
+        gvy = (g.y - grabbedPrevY) / elapsed;
+      grabbedPrevX = g.x;
+      grabbedPrevY = g.y;
+      grabbedPrevAt = nowTime;
+      for (const m of monsters) {
+        if (m === g || m.bombEnd) continue;
+        const dx = m.x - g.x,
+          dy = m.y - g.y,
+          rawDistance = Math.hypot(dx, dy),
+          distance = Math.max(1, rawDistance),
+          radiusSum = characterRadius(g) + characterRadius(m),
+          closing = (m.vx - gvx) * dx + (m.vy - gvy) * dy < 0;
+        if (
+          distance > radiusSum + 30 ||
+          (!closing && distance > radiusSum + 18) ||
+          tick < m.reactionCooldown
+        ) {
+          continue;
+        }
+        const nx = rawDistance
+            ? dx / distance
+            : Math.cos(g.phase - m.phase),
+          ny = rawDistance
+            ? dy / distance
+            : Math.sin(g.phase - m.phase),
+          kick = 130 + Math.random() * 70,
+          mood = Math.random() < 0.5 ? "panic" : "angry";
+        m.vx = nx * kick + ny * 24;
+        m.vy = ny * kick - nx * 24;
+        m.turnIn = 1.2;
+        m.reactionCooldown = tick + 1.15;
+        m.nextActionAt = tick + 3 + Math.random() * 3;
+        setCharacterAction(m, mood, 0.85);
       }
     }
   }
@@ -1435,6 +1481,9 @@
     m.dragVY = 0;
     m.vx = 0;
     m.vy = 0;
+    grabbedPrevX = m.x;
+    grabbedPrevY = m.y;
+    grabbedPrevAt = performance.now();
     m.sweatUntil = tick + 0.45;
     setCharacterAction(m, "sweat", 0.5);
     world.setPointerCapture(e.pointerId);
