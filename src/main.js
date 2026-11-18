@@ -11,6 +11,24 @@
   document.addEventListener("selectstart", (e) => {
     if (!e.target.closest("input")) e.preventDefault();
   });
+  // Pinch zoom would break the full-screen play area: block Safari's gesture
+  // events, trackpad pinch (ctrl+wheel) and any two-finger touch zoom fallback.
+  for (const type of ["gesturestart", "gesturechange", "gestureend"])
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener(
+    "wheel",
+    (e) => {
+      if (e.ctrlKey) e.preventDefault();
+    },
+    { passive: false },
+  );
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length > 1) e.preventDefault();
+    },
+    { passive: false },
+  );
   const magicCursor = $("magic-cursor"),
     pointerFx = $("pointer-fx");
   const finePointer = matchMedia("(hover:hover) and (pointer:fine)");
