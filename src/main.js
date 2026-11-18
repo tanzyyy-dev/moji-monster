@@ -146,7 +146,13 @@
     photoInProgress = false,
     fireworksInProgress = false,
     fireworksStartedAt = 0,
-    photoSessionId = 0;
+    photoSessionId = 0,
+    randomEventInProgress = false,
+    randomEventType = "",
+    randomEventStart = 0,
+    randomEventEnd = 0,
+    randomEventEndTick = 0,
+    nextRandomEventAt = performance.now() + 45000 + Math.random() * 30000;
   let grabbedMonster = null,
     grabbedPointerId = null,
     grabOffsetX = 0,
@@ -1964,8 +1970,22 @@
       ctx.fillStyle = `rgba(255, 201, 78, ${twinkle})`;
       drawActionStar(ctx, -size * 0.64, -size * 0.28, 4);
       drawActionStar(ctx, size * 0.64, -size * 0.12, 3.5);
-    }
-  }
+     } else if (action === "sleep") {
+       ctx.save();
+       ctx.textAlign = "left";
+       ctx.textBaseline = "middle";
+       ctx.fillStyle = "#6b5a52";
+       ctx.globalAlpha = 0.85;
+       const bob = Math.sin(t * 2 + m.phase) * 2;
+       ctx.font = `900 ${Math.max(11, size * 0.32)}px system-ui, sans-serif`;
+       ctx.fillText("z", size * 0.5, -size * 0.55 + bob);
+       ctx.font = `900 ${Math.max(14, size * 0.44)}px system-ui, sans-serif`;
+       ctx.fillText("z", size * 0.85, -size * 0.8 + bob * 1.2);
+       ctx.font = `900 ${Math.max(17, size * 0.56)}px system-ui, sans-serif`;
+       ctx.fillText("Z", size * 1.15, -size * 1.05 + bob * 1.5);
+       ctx.restore();
+     }
+   }
   function monster(ctx, m, t) {
     const action =
         m === grabbedMonster ? "sweat" : t < m.actionUntil ? m.action : "",
@@ -1997,6 +2017,7 @@
           Math.min(160, w * 0.4) / iw,
           Math.min(170, h * 0.34) / ih,
         ) * characterDisplayScale();
+      if (action === "sleep") ctx.rotate(0.32);
       ctx.drawImage(
         m.image,
         (-iw * scale) / 2,
@@ -2026,7 +2047,17 @@
     for (const path of m.paths)
       ink(ctx, [path], path.inkColor || m.color, path.brushScale || 1);
     const fy = m.faceY;
-    if (action === "relieved" || dancing) {
+    if (action === "sleep") {
+      ctx.strokeStyle = "#55453f";
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = "round";
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(s * m.eyeOffset - 6, fy);
+        ctx.lineTo(s * m.eyeOffset + 6, fy);
+        ctx.stroke();
+      }
+    } else if (action === "relieved" || dancing) {
       ctx.strokeStyle = "#55453f";
       ctx.lineWidth = 2.5;
       for (const s of [-1, 1]) {
@@ -2088,12 +2119,112 @@
       ctx.lineTo(0, fy + 16);
       ctx.lineTo(5, fy + 19);
       ctx.stroke();
+    } else if (action === "sleep") {
+      ctx.moveTo(-4, fy + 15);
+      ctx.lineTo(4, fy + 15);
+      ctx.stroke();
     } else {
       ctx.arc(0, fy + 15, 5, 0, Math.PI);
       ctx.stroke();
     }
     drawActionEffects(ctx, m, t, action);
     ctx.restore();
+  }
+  function drawRain(ctx) {
+    ctx.save();
+    ctx.fillStyle = "rgba(70,80,100,0.22)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "rgba(210,230,255,0.7)";
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = "round";
+    const count = Math.max(60, Math.floor(w / 6));
+    for (let i = 0; i < count; i++) {
+      const base = (i * 97 + 13) % Math.max(1, w + 80);
+      const x = (base + tick * 260) % (w + 80) - 40;
+      const yBase = (i * 61 + 7) % Math.max(1, h);
+      const y = (yBase + tick * 520) % (h + 40) - 20;
+      const len = 12 + (i % 5) * 4;
+      ctx.globalAlpha = 0.45 + (i % 3) * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 4, y + len);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  function drawWind(ctx) {
+    ctx.save();
+    const count = Math.max(18, Math.floor(w / 30));
+    for (let i = 0; i < count; i++) {
+      const baseY = (i * 53 + 11) % Math.max(1, h);
+      const y = baseY;
+      const progress = (tick * 1.6 + i * 0.37) % 1;
+      const x = progress * (w + 120) - 60;
+      const len = 40 + (i % 4) * 22;
+      ctx.globalAlpha = 0.25 + (1 - Math.abs(progress - 0.5) * 2) * 0.45;
+      ctx.strokeStyle = "rgba(255,250,240,0.85)";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + len, y - (i % 3) * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  function startRandomEvent() {
+    if (randomEventInProgress || photoInProgress || fireworksInProgress || grabbedMonster)
+      return;
+    if (!monsters.length) {
+      nextRandomEventAt = performance.now() + 10000;
+      return;
+    }
+    randomEventInProgress = true;
+    randomEventType = ["wind", "rain", "night"][Math.floor(Math.random() * 3)];
+    randomEventStart = performance.now();
+    randomEventEnd = randomEventStart + 10000;
+    randomEventEndTick = tick + 10;
+    for (const m of monsters) {
+      m.eventType = randomEventType;
+      m.vx = 0;
+      m.vy = 0;
+      m.turnIn = 999;
+      m.nextActionAt = randomEventEndTick + 1;
+      if (randomEventType === "rain") {
+        m.action = "angry";
+        m.actionStart = tick;
+        m.actionUntil = randomEventEndTick;
+      } else if (randomEventType === "night") {
+        m.action = "sleep";
+        m.actionStart = tick;
+        m.actionUntil = randomEventEndTick;
+      } else {
+        m.action = "";
+        m.actionUntil = 0;
+        m.sweatUntil = randomEventEndTick;
+      }
+    }
+    if (randomEventType === "night") dayReturnAt = 0;
+  }
+  function endRandomEvent() {
+    if (!randomEventInProgress) return;
+    const type = randomEventType;
+    randomEventInProgress = false;
+    randomEventType = "";
+    for (const m of monsters) {
+      m.eventType = "";
+      m.turnIn = 0.5 + Math.random() * 0.6;
+      m.action = "";
+      m.actionUntil = 0;
+      m.sweatUntil = 0;
+      m.vx = (Math.random() - 0.5) * 40;
+      m.vy = (Math.random() - 0.5) * 20;
+      m.nextActionAt = tick + 2 + Math.random() * 2;
+    }
+    if (type === "night") dayReturnAt = performance.now();
+    nextRandomEventAt = performance.now() + 50000 + Math.random() * 20000;
   }
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
@@ -2102,9 +2233,16 @@
     if (fireworksInProgress) {
       dayReturnAt = 0;
       nightProgress = Math.min(1, nightProgress + dt / 3.2);
+    } else if (randomEventInProgress && randomEventType === "night") {
+      dayReturnAt = 0;
+      nightProgress = Math.min(1, nightProgress + dt / 1.2);
     }
     wc.clearRect(0, 0, w, h);
     bg(wc, w, h, topbar.offsetHeight, app.clientHeight);
+    if (randomEventInProgress) {
+      if (randomEventType === "rain") drawRain(wc);
+      else if (randomEventType === "wind") drawWind(wc);
+    }
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i];
       if (m.bombEnd && now >= m.bombEnd) {
@@ -2189,6 +2327,32 @@
         m.vy = 0;
         continue;
       }
+      if (randomEventInProgress) {
+        const r = characterRadius(m);
+        if (randomEventType === "wind") {
+          m.sweatUntil = tick + 0.5;
+          m.x += 150 * dt;
+          if (m.x > w - r) m.x = w - r;
+          if (m.x < r) m.x = r;
+          m.y = Math.max(r, Math.min(h - r, m.y));
+          m.vx = 0;
+          m.vy = 0;
+        } else if (randomEventType === "rain") {
+          m.action = "angry";
+          m.actionUntil = randomEventEndTick;
+          m.y += 42 * dt;
+          if (m.y > h - r) m.y = h - r;
+          m.x = Math.max(r, Math.min(w - r, m.x));
+          m.vx = 0;
+          m.vy = 0;
+        } else if (randomEventType === "night") {
+          m.action = "sleep";
+          m.actionUntil = randomEventEndTick;
+          m.vx = 0;
+          m.vy = 0;
+        }
+        continue;
+      }
       m.turnIn -= dt;
       if (m.turnIn <= 0) {
         m.turnIn = 0.4 + Math.random() * 2.8;
@@ -2221,7 +2385,7 @@
         m.nextActionAt = tick + 4 + Math.random() * 5;
       }
     }
-    if (!photoInProgress && !fireworksInProgress) avoidNearCollisions();
+    if (!photoInProgress && !fireworksInProgress && !randomEventInProgress) avoidNearCollisions();
     for (const m of monsters) {
       monster(wc, m, tick);
       if (m.bombEnd) {
@@ -2280,6 +2444,17 @@
       fireworksInProgress = false;
       dayReturnAt = now + 2200;
     }
+    if (randomEventInProgress && (monsters.length === 0 || now >= randomEventEnd))
+      endRandomEvent();
+    if (
+      !randomEventInProgress &&
+      !photoInProgress &&
+      !fireworksInProgress &&
+      !grabbedMonster &&
+      monsters.length > 0 &&
+      now >= nextRandomEventAt
+    )
+      startRandomEvent();
     updateTopButtons();
     requestAnimationFrame(frame);
   }
@@ -2456,7 +2631,7 @@
   const wait = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
   async function takePhoto() {
-    if (photoInProgress || fireworksInProgress) return;
+    if (photoInProgress || fireworksInProgress || randomEventInProgress) return;
     cancelFloat();
     const session = ++photoSessionId,
       targets = photoTargets();
@@ -2507,7 +2682,7 @@
     }
   }
   function startFireworks() {
-    if (photoInProgress || fireworksInProgress) return;
+    if (photoInProgress || fireworksInProgress || randomEventInProgress) return;
     cancelFloat();
     fireworksInProgress = true;
     fireworksStartedAt = performance.now();
