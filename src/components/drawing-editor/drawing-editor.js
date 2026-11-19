@@ -8,7 +8,7 @@ import { withIconUrls } from "../../icons.js";
 
 const MAX_UNDO_STEPS = 12;
 
-export function createDrawingEditor(root, { audio, sparkle, isPlaygroundBusy, planLanding, onComplete }) {
+export function createDrawingEditor(root, { audio, sparkle, isPlaygroundBusy, prepareArtwork, planLanding, onComplete }) {
   root.innerHTML = withIconUrls(markup);
   const $ = (id) => root.querySelector(`#${id}`);
   const draw = $("draw"), dc = draw.getContext("2d");
@@ -383,6 +383,7 @@ export function createDrawingEditor(root, { audio, sparkle, isPlaygroundBusy, pl
   let countdownTimer = null,
     countdownInterval = null,
     countdownEnd = 0,
+    cancelReplacement = null,
     floatGhost = null;
   const FLOAT_DELAY = 5000;
   function removeFloatGhost(landed = false) {
@@ -511,6 +512,8 @@ export function createDrawingEditor(root, { audio, sparkle, isPlaygroundBusy, pl
     clearInterval(countdownInterval);
     countdownTimer = null;
     countdownInterval = null;
+    cancelReplacement?.();
+    cancelReplacement = null;
     removeFloatGhost();
     draw.parentElement.classList.remove("waiting");
     setDrawLocked(false);
@@ -524,6 +527,7 @@ export function createDrawingEditor(root, { audio, sparkle, isPlaygroundBusy, pl
     const artwork = finishArtwork();
     if (!artwork) return;
     countdownEnd = performance.now() + FLOAT_DELAY;
+    cancelReplacement = prepareArtwork(countdownEnd);
     draw.parentElement.classList.add("waiting");
     setDrawLocked(true);
     $("finish").disabled = true;

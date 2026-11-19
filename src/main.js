@@ -19,6 +19,7 @@ const editor = createDrawingEditor(document.querySelector("#drawing-editor"), {
   audio,
   sparkle,
   isPlaygroundBusy: playground.isBusy,
+  prepareArtwork: playground.prepareArtwork,
   planLanding: playground.planLanding,
   onComplete: playground.addArtwork,
 });

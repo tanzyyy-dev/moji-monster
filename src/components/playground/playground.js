@@ -4,8 +4,13 @@ import { fitCanvas } from "../../canvas.js";
 import { withIconUrls } from "../../icons.js";
 import { createPhoto } from "../photo/photo.js";
 import { drawBackground, drawRain, drawWind } from "./background.js";
-import { baseCharacterRadius, characterDisplayScale, drawCharacter } from "./character-art.js";
+import { drawHeat, drawLightning } from "./weather-art.js";
+import { boltEscape, choosePersonality, movementLimits, scatterCharacters, SCATTER_SECONDS, SCATTER_SPEED_MULTIPLIER, shoveDestination, steerPersonality } from "./character-motion.mjs";
+import { baseCharacterRadius, characterBob, characterDisplayScale, drawCharacter } from "./character-art.js";
 import { drawBombCountdown, fireworkCall, fireworkCallText, fireworksBurst, fireworkShapes, updateParticles } from "./effects.js";
+
+const WEATHER_TYPES = ["wind", "rain", "night", "thunder", "heat"];
+const MAX_CHARACTERS = 12;
 
 export function createPlayground(root, { app, topbar, audio, sparkle, onPresentationStart, onBombPress, onFireworksChange }) {
   root.innerHTML = markup;
@@ -16,6 +21,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   const { soundFloat, soundTick, soundExplosion, soundRocket, soundBurst, soundCheer, soundPhotoCue } = audio;
 
   const monsters = [];
+  let replacement = null;
   let w = 0,
     h = 0,
     last = performance.now(),
@@ -33,6 +39,9 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     randomEventType = "",
     randomEventEnd = 0,
     randomEventEndTick = 0,
+    nextStrikeAt = 0,
+    lightning = null,
+    scatterUntil = 0,
     nextRandomEventAt = performance.now() + 45000 + Math.random() * 30000;
   let grabbedMonster = null,
     grabbedPointerId = null,
@@ -68,7 +77,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   function characterAt(x, y) {
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i],
-        bob = Math.sin(tick * 3 + m.phase) * 5,
+        bob = characterBob(m, tick),
         hitRadius = characterRadius(m) * (m.image ? 1.12 : 1.3);
       if (Math.hypot(x - m.x, y - (m.y + bob)) <= hitRadius) return m;
     }
@@ -108,7 +117,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     lastGrabX = point.x;
     lastGrabY = point.y;
     lastGrabAt = now;
-    if (!photoInProgress && !fireworksInProgress) avoidNearCollisions();
+    if (!photoInProgress && !fireworksInProgress && !randomEventInProgress && tick >= scatterUntil) avoidNearCollisions();
   }
   function releaseGrab(e, keepMomentum = true) {
     if (!grabbedMonster || (e && e.pointerId !== grabbedPointerId)) return;
@@ -123,6 +132,23 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     setCharacterAction(m, "relieved", 0.8);
     world.style.cursor = bombMode ? "crosshair" : "default";
   }
+  function separateSleepers(a, b, radiusSum) {
+    const [pusher, target] = Math.random() < 0.5 ? [a, b] : [b, a];
+    const destination = shoveDestination(pusher, target, w, h, radiusSum + 40);
+    pusher.shoveAngle = Math.atan2(destination.y - pusher.y, destination.x - pusher.x);
+    pusher.vx = pusher.vy = 0;
+    pusher.shoveTarget = null;
+    pusher.wakeUntil = tick + 0.35;
+    target.shoveTarget = destination;
+    target.wakeUntil = tick + 0.75;
+    for (const m of [pusher, target]) {
+      m.napping = false;
+      m.hadCloseNeighbor = true;
+      m.reactionCooldown = tick + 1.2;
+    }
+    setCharacterAction(pusher, "shove", 0.35);
+    setCharacterAction(target, "startled", 0.65);
+  }
   function avoidNearCollisions() {
     for (let i = 0; i < monsters.length; i++) {
       const a = monsters[i];
@@ -136,6 +162,12 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
           distance = Math.max(1, rawDistance),
           radiusSum = characterRadius(a) + characterRadius(b),
           closing = (b.vx - a.vx) * dx + (b.vy - a.vy) * dy < 0;
+        if (a.personality === "lazy" && b.personality === "lazy") {
+          if (rawDistance < radiusSum * 0.88 && tick >= a.reactionCooldown && tick >= b.reactionCooldown) {
+            separateSleepers(a, b, radiusSum);
+          }
+          continue;
+        }
         if (
           distance > radiusSum + 18 ||
           (!closing && distance > radiusSum * 0.88) ||
@@ -208,6 +240,14 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   function isPlaygroundBusy() {
     return photoInProgress || fireworksInProgress;
   }
+  function prepareArtwork(deadline) {
+    if (monsters.length < MAX_CHARACTERS) return;
+    const slot = { target: monsters[0], deadline };
+    replacement = slot;
+    return () => {
+      if (replacement === slot) replacement = null;
+    };
+  }
   function planLanding(hasImage) {
     const displayScale = characterDisplayScale(w, h);
     const size = hasImage
@@ -233,6 +273,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       Object.assign(m, {
         size,
         withFace: artwork.withFace,
+        personality: artwork.withFace === true ? choosePersonality() : null,
         faceY: -Math.min(12, height * unit * 0.18),
         eyeOffset: Math.min(14, width * unit * 0.17),
       });
@@ -263,6 +304,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       turnIn: 1,
       phase: Math.random() * 6.28,
       age: 0,
+      napping: m.personality === "lazy",
       action: "",
       actionStart: 0,
       actionUntil: 0,
@@ -272,8 +314,16 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       dragVX: 0,
       dragVY: 0,
     });
+    if (monsters.length >= MAX_CHARACTERS) {
+      const departing = monsters.shift();
+      if (departing === grabbedMonster) {
+        const pointer = grabbedPointerId;
+        releaseGrab(null, false);
+        if (world.hasPointerCapture(pointer)) world.releasePointerCapture(pointer);
+      }
+      explode(departing);
+    }
     monsters.push(m);
-    if (monsters.length > 12) monsters.shift();
     soundFloat();
     if (landing) {
       const r = world.getBoundingClientRect();
@@ -338,6 +388,8 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     grabbedPrevY = m.y;
     grabbedPrevAt = performance.now();
     m.sweatUntil = tick + 0.45;
+    m.napping = false;
+    m.shoveTarget = null;
     setCharacterAction(m, "sweat", 0.5);
     world.setPointerCapture(e.pointerId);
     world.style.cursor = "grabbing";
@@ -382,49 +434,108 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       return;
     }
     randomEventInProgress = true;
-    randomEventType = ["wind", "rain", "night"][Math.floor(Math.random() * 3)];
-    randomEventEnd = performance.now() + 10000;
+    randomEventType = WEATHER_TYPES[Math.floor(Math.random() * WEATHER_TYPES.length)];
+    const now = performance.now();
+    randomEventEnd = now + 10000;
     randomEventEndTick = tick + 10;
-    for (const m of monsters) {
-      m.eventType = randomEventType;
-      m.vx = 0;
-      m.vy = 0;
-      m.turnIn = 999;
-      m.nextActionAt = randomEventEndTick + 1;
-      if (randomEventType === "rain") {
-        m.action = "angry";
-        m.actionStart = tick;
-        m.actionUntil = randomEventEndTick;
-      } else if (randomEventType === "night") {
-        m.action = "sleep";
-        m.actionStart = tick;
-        m.actionUntil = randomEventEndTick;
-      } else {
-        m.action = "";
-        m.actionUntil = 0;
-        m.sweatUntil = randomEventEndTick;
-      }
-    }
+    if (randomEventType === "thunder") nextStrikeAt = now + 450 + Math.random() * 600;
     if (randomEventType === "night") dayReturnAt = 0;
-  }
-  function endRandomEvent() {
-    if (!randomEventInProgress) return;
-    const type = randomEventType;
-    randomEventInProgress = false;
-    randomEventType = "";
     for (const m of monsters) {
-      m.eventType = "";
-      m.turnIn = 0.5 + Math.random() * 0.6;
+      m.vx = m.vy = 0;
+      m.turnIn = 0;
       m.action = "";
       m.actionUntil = 0;
-      m.sweatUntil = 0;
-      m.vx = (Math.random() - 0.5) * 40;
-      m.vy = (Math.random() - 0.5) * 20;
-      m.nextActionAt = tick + 2 + Math.random() * 2;
+      m.napping = false;
+      m.shoveTarget = null;
+      m.thunderRunUntil = 0;
     }
-    if (type === "night") dayReturnAt = performance.now();
-    nextRandomEventAt = performance.now() + 50000 + Math.random() * 20000;
   }
+
+  function endRandomEvent(now) {
+    if (randomEventType === "night") dayReturnAt = now;
+    randomEventInProgress = false;
+    randomEventType = "";
+    lightning = null;
+    scatterCharacters(monsters, tick);
+    scatterUntil = tick + SCATTER_SECONDS;
+    nextRandomEventAt = now + 50000 + Math.random() * 20000;
+  }
+
+  function updateThunder(now) {
+    if (lightning && now >= lightning.until) lightning = null;
+    if (now < nextStrikeAt) return;
+    const x = w * (0.1 + Math.random() * 0.8);
+    lightning = {
+      x,
+      until: now + 260,
+      offsets: Array.from({ length: 9 }, (_, i) =>
+        i === 8 || i % 2 === 0 ? 0 : (Math.random() - 0.5) * Math.min(54, w * 0.12),
+      ),
+    };
+    nextStrikeAt = now + 1550 + Math.random() * 1000;
+    for (const m of monsters) {
+      if (m !== grabbedMonster && boltEscape(m, x, characterRadius(m), w, tick)) {
+        setCharacterAction(m, "startled", 0.72);
+      }
+    }
+  }
+
+  function turnCharacter(m, minSpeed = 10, speedRange = 40) {
+    m.turnIn = 0.4 + Math.random() * 2.8;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = minSpeed + Math.random() * speedRange;
+    m.vx = Math.cos(angle) * speed;
+    m.vy = Math.sin(angle) * speed;
+  }
+
+  function updateWeatherCharacter(m, dt) {
+    m.napping = false;
+    if (randomEventType === "wind") {
+      m.sweatUntil = tick + 0.5;
+      placeCharacter(m, m.x + 150 * dt, m.y);
+    } else if (randomEventType === "rain" || randomEventType === "thunder") {
+      if (tick < m.thunderRunUntil) {
+        placeCharacter(m, m.x + m.vx * dt, m.y + 16 * dt);
+        return;
+      }
+      if (tick >= m.actionUntil || m.action !== "startled")
+        setCharacterAction(m, "angry", Math.max(0, randomEventEndTick - tick));
+      placeCharacter(m, m.x, m.y + 42 * dt);
+    } else if (randomEventType === "heat") {
+      if (m.action !== "tired" || tick >= m.actionUntil)
+        setCharacterAction(m, "tired", Math.max(0, randomEventEndTick - tick));
+      m.sweatUntil = tick + 0.45;
+      m.turnIn -= dt;
+      if (m.turnIn <= 0) turnCharacter(m, 22, 16);
+      moveCharacter(m, dt * 0.3);
+      return;
+    } else {
+      if (m.action !== "sleep" || tick >= m.actionUntil)
+        setCharacterAction(m, "sleep", Math.max(0, randomEventEndTick - tick));
+    }
+    m.vx = m.vy = 0;
+  }
+
+  function moveCharacter(m, dt) {
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    const { left, right, top, bottom } = movementLimits(w, h);
+    if (m.x < left) {
+      m.x = left;
+      m.vx = Math.abs(m.vx);
+    } else if (m.x > right) {
+      m.x = right;
+      m.vx = -Math.abs(m.vx);
+    }
+    if (m.y < top) {
+      m.y = top;
+      m.vy = Math.abs(m.vy);
+    } else if (m.y > bottom) {
+      m.y = bottom;
+      m.vy = -Math.abs(m.vy);
+    }
+  }
+
   function updateCharacters(now, dt) {
     for (let i = monsters.length - 1; i >= 0; i--) {
       const m = monsters[i];
@@ -512,64 +623,27 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
         continue;
       }
       if (randomEventInProgress) {
-        const r = characterRadius(m);
-        if (randomEventType === "wind") {
-          m.sweatUntil = tick + 0.5;
-          m.x += 150 * dt;
-          if (m.x > w - r) m.x = w - r;
-          if (m.x < r) m.x = r;
-          m.y = Math.max(r, Math.min(h - r, m.y));
-          m.vx = 0;
-          m.vy = 0;
-        } else if (randomEventType === "rain") {
-          m.action = "angry";
-          m.actionUntil = randomEventEndTick;
-          m.y += 42 * dt;
-          if (m.y > h - r) m.y = h - r;
-          m.x = Math.max(r, Math.min(w - r, m.x));
-          m.vx = 0;
-          m.vy = 0;
-        } else if (randomEventType === "night") {
-          m.action = "sleep";
-          m.actionUntil = randomEventEndTick;
-          m.vx = 0;
-          m.vy = 0;
-        }
+        updateWeatherCharacter(m, dt);
         continue;
       }
-      m.turnIn -= dt;
-      if (m.turnIn <= 0) {
-        m.turnIn = 0.4 + Math.random() * 2.8;
-        const a = Math.random() * Math.PI * 2,
-          speed = 10 + Math.random() * 40;
-        m.vx = Math.cos(a) * speed;
-        m.vy = Math.sin(a) * speed;
+      const scatterTime = Math.min(dt, scatterUntil - (tick - dt));
+      if (scatterTime > 0) {
+        moveCharacter(m, scatterTime * SCATTER_SPEED_MULTIPLIER + dt - scatterTime);
+        continue;
       }
-      m.x += m.vx * dt;
-      m.y += m.vy * dt;
-      if (m.x < 40) {
-        m.x = 40;
-        m.vx = Math.abs(m.vx);
+      const steered = steerPersonality(m, monsters, characterRadius, tick, dt);
+      if (!steered) {
+        m.turnIn -= dt;
+        if (m.turnIn <= 0) turnCharacter(m);
       }
-      if (m.x > w - 40) {
-        m.x = w - 40;
-        m.vx = -Math.abs(m.vx);
-      }
-      if (m.y < 45) {
-        m.y = 45;
-        m.vy = Math.abs(m.vy);
-      }
-      if (m.y > h - 40) {
-        m.y = h - 40;
-        m.vy = -Math.abs(m.vy);
-      }
-      if (!m.bombEnd && tick >= m.nextActionAt && tick >= m.actionUntil) {
+      moveCharacter(m, dt);
+      if (!steered && !m.bombEnd && tick >= m.nextActionAt && tick >= m.actionUntil) {
         const action = Math.random() < 0.5 ? "jump" : "dance";
         setCharacterAction(m, action, action === "jump" ? 0.85 : 1.35);
         m.nextActionAt = tick + 4 + Math.random() * 5;
       }
     }
-    if (!photoInProgress && !fireworksInProgress && !randomEventInProgress) avoidNearCollisions();
+    if (!photoInProgress && !fireworksInProgress && !randomEventInProgress && tick >= scatterUntil) avoidNearCollisions();
   }
 
   function update(now) {
@@ -585,14 +659,21 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     wc.clearRect(0, 0, w, h);
     renderBackground(wc, w, h, topbar.offsetHeight, app.clientHeight);
     if (randomEventInProgress) {
-      if (randomEventType === "rain") drawRain(wc, w, h, tick);
-      else if (randomEventType === "wind") drawWind(wc, w, h, tick);
+      if (randomEventType === "rain" || randomEventType === "thunder") drawRain(wc, w, h, tick);
+      if (randomEventType === "thunder") {
+        updateThunder(now);
+        if (lightning) drawLightning(wc, w, h, lightning, now);
+      } else if (randomEventType === "wind") drawWind(wc, w, h, tick);
+      else if (randomEventType === "heat") drawHeat(wc, w, h, tick);
     }
     updateCharacters(now, dt);
     for (const m of monsters) {
       renderCharacter(wc, m);
-      if (m.bombEnd) {
-        const remaining = Math.max(0, Math.ceil((m.bombEnd - now) / 1000));
+      const replacementDeadline = monsters.length >= MAX_CHARACTERS && replacement?.target === m
+        ? replacement.deadline : Infinity;
+      const deadline = Math.min(m.bombEnd || Infinity, replacementDeadline);
+      if (deadline !== Infinity) {
+        const remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
         if (remaining !== m.lastBombSecond) {
           m.lastBombSecond = remaining;
           soundTick(remaining, panFor(m.x));
@@ -621,7 +702,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       dayReturnAt = now + 2200;
     }
     if (randomEventInProgress && (monsters.length === 0 || now >= randomEventEnd))
-      endRandomEvent();
+      endRandomEvent(now);
     if (
       !randomEventInProgress &&
       !photoInProgress &&
@@ -672,6 +753,8 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     photoInProgress = true;
     if (grabbedMonster) releaseGrab(null, false);
     monsters.forEach((m, index) => {
+      m.napping = false;
+      m.shoveTarget = null;
       m.photoTarget = targets[index];
       m.presentationScale = m.presentationScale || 1;
       m.vx = 0;
@@ -724,6 +807,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
       m.photoTarget = null;
       m.vx = 0;
       m.vy = 0;
+      m.napping = false;
       m.fireworkAt = fireworksStartedAt + 3200 + index * 1500;
       m.fireworkStartAt = 0;
       m.fireworkOrder = index;
@@ -742,5 +826,5 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   createPhoto(root, $("photo"), { audio, beginPose, alignPose, endPose, captureScene });
   $("fireworks").onclick = startFireworks;
   resize();
-  return { canvas: world, isBusy: isPlaygroundBusy, planLanding, addArtwork, update };
+  return { canvas: world, isBusy: isPlaygroundBusy, prepareArtwork, planLanding, addArtwork, update };
 }
