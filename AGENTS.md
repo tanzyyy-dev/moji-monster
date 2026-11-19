@@ -5,4 +5,9 @@
 - Preserve the custom rights-reserved terms in `LICENSE.md`. Do not replace them with an open-source license unless the user asks.
 - Use a suitable Lucide SVG from `assets/icons/` for interface icons when one exists, and preserve `assets/icons/LICENSE-LUCIDE.txt`. Keep custom illustrations and template art as game content.
 - The background track in `assets/audio/` was generated with Gemini. Keep its provenance documented and do not claim exclusive copyright in the generated audio.
-- Unless the user gives different instructions for a task, they authorize direct commits and pushes to `main`. Before pushing, review the complete diff and confirm the target branch is `main`.
+## Git workflow
+
+- By default, make changes only to local working files. Editing files does not imply permission to commit or push.
+- Do not create new Git branches. Keep work on the existing `main` branch.
+- Commit or push only when the user explicitly requests that action. Do not infer authorization from a general request to implement or edit something.
+- When a commit or push is explicitly authorized, review the complete diff first and confirm the target branch is `main` before pushing.
