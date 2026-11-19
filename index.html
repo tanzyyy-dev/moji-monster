@@ -11,117 +11,14 @@
   </head>
   <body>
     <div class="app">
-      <header class="topbar" aria-label="ゲーム操作">
-        <div class="toptools top-left" role="group" aria-label="左の操作">
-          <button id="photo" class="tool" aria-label="写真を撮る" title="写真を撮る" disabled>
-            <img class="lucide-icon" src="./assets/icons/camera.svg" alt="" />
-          </button>
-        </div>
-        <div class="toptools top-right" role="group" aria-label="右の操作">
-          <button
-            id="bomb"
-            class="tool bomb-tool"
-            aria-label="爆弾モードをオン"
-            aria-pressed="false"
-            title="キャラクターを選んで10秒後に爆発"
-            disabled
-          >
-            <img class="lucide-icon" src="./assets/icons/bomb.svg" alt="" />
-          </button>
-          <button id="fireworks" class="tool" aria-label="花火を打ち上げる" title="花火を打ち上げる" disabled>
-            <img class="lucide-icon" src="./assets/icons/party-popper.svg" alt="" />
-          </button>
-        </div>
-      </header>
-      <main class="world">
-        <canvas id="world"></canvas>
-        <div id="firework-calls" class="firework-calls" aria-hidden="true"></div>
-        <div id="photo-stage" class="photo-stage" hidden>
-          <div class="photo-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-          <div id="photo-message" class="photo-bubble" aria-live="polite">
-            <span class="photo-bubble-icon"><img class="lucide-icon" src="./assets/icons/camera.svg" alt="" /></span>
-            <span id="photo-message-text"></span>
-          </div>
-        </div>
-        <div id="photo-flash" class="photo-flash" aria-hidden="true"></div>
-      </main>
-      <footer class="bottom">
-        <section class="inline-draw">
-          <div class="drawbox">
-            <canvas id="draw"></canvas>
-            <div class="swipe-hint" aria-live="polite">
-              <img class="lucide-icon" src="./assets/icons/timer.svg" alt="" />
-              <span id="countdown-number">5</span>
-            </div>
-          </div>
-          <div class="draw-controls">
-            <div class="drawing-tools">
-              <div class="color-picker">
-                <button
-                  id="color-cycle"
-                  class="color-cycle"
-                  aria-label="色と描画方法を選ぶ"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                  title="色を選ぶ"
-                ></button>
-                <div id="color-palette" class="color-palette" role="group" aria-label="色" hidden>
-                  <div id="palette-colors" class="palette-colors" role="group" aria-label="色"></div>
-                </div>
-              </div>
-              <div class="brush-picker">
-                <button
-                  id="brush-cycle"
-                  class="secondary brush-cycle"
-                  aria-label="描画方法を選ぶ"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                  title="描画方法"
-                >
-                  <img class="lucide-icon" src="./assets/icons/pencil.svg" alt="" />
-                </button>
-                <div id="brush-menu" class="brush-menu" role="group" aria-label="描画方法" hidden></div>
-              </div>
-              <div class="asset-picker">
-                <button
-                  id="asset-cycle"
-                  class="secondary asset-cycle"
-                  aria-label="塗り絵や写真を選ぶ"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                  title="絵を選ぶ"
-                >
-                  <img class="lucide-icon" src="./assets/icons/image.svg" alt="" />
-                </button>
-                <div
-                  id="asset-list"
-                  class="asset-list"
-                  role="group"
-                  aria-label="塗り絵または写真を選ぶ"
-                  hidden
-                ></div>
-              </div>
-              <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
-              <button
-                id="clear"
-                class="secondary"
-                aria-label="書き直す"
-                title="消しゴム"
-              >
-                <img class="lucide-icon" src="./assets/icons/eraser.svg" alt="" />
-              </button>
-            </div>
-            <button id="finish" class="secondary finish" aria-label="できた">できた</button>
-          </div>
-        </section>
-      </footer>
+      <!-- Playground tools and scene, including the photo stage. -->
+      <header class="topbar" aria-label="ゲーム操作"></header>
+      <main class="world" id="playground"></main>
+      <!-- Drawing editor mounts here. -->
+      <footer class="bottom" id="drawing-editor"></footer>
     </div>
-    <div id="toast" class="toast" role="status"></div>
-    <div id="magic-cursor" aria-hidden="true">
-      <img class="lucide-icon" src="./assets/icons/sparkles.svg" alt="" />
-    </div>
-    <div id="pointer-fx" aria-hidden="true"></div>
-    <script src="./src/zoom-guard.js"></script>
-    <script src="./src/main.js"></script>
+    <!-- Pointer effects use a viewport overlay. -->
+    <div id="pointer-effects"></div>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
-const zoomGuard = require(path.join(root, "src", "zoom-guard.js"));
+const zoomGuard = require(path.join(root, "src", "zoom-guard.mjs"));
 
 function makeTarget() {
   const listeners = new Map();

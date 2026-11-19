@@ -1,0 +1,128 @@
+.topbar {
+  flex: 0 0 calc(56px + env(safe-area-inset-top));
+  min-height: calc(56px + env(safe-area-inset-top));
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(5px, env(safe-area-inset-top)) 12px 5px;
+  background: #fffaf0d9;
+  border-bottom: 1px solid #ffffffb5;
+  z-index: 4;
+}
+.world {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+#world {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+.toptools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tool {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  border-radius: 14px;
+  background: #fff9e9;
+  border: 2px solid #5b493d;
+  box-shadow: 0 3px #c8b9a1;
+  font-weight: 900;
+}
+.tool .lucide-icon {
+  width: 26px;
+  height: 26px;
+  margin: auto;
+}
+.tool:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+.bomb-tool.active {
+  background: #ffb66b;
+  box-shadow:
+    0 0 0 4px #fbe7ad,
+    0 4px #9b6845;
+}
+.firework-calls {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.firework-call {
+  --fill: #ff6f91;
+  --edge: #ffffff;
+  --shade: #b8325a;
+  position: absolute;
+  display: flex;
+  white-space: nowrap;
+  transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", ui-rounded,
+    "M PLUS Rounded 1c", "Kosugi Maru", "BIZ UDGothic", system-ui, sans-serif;
+  font-size: clamp(24px, 8vw, 56px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  max-width: calc(100% - 16px);
+  line-height: 1;
+  color: var(--fill);
+  -webkit-text-stroke: 7px var(--edge);
+  paint-order: stroke fill;
+  text-shadow:
+    0 4px 0 var(--shade),
+    0 0 18px #fff8;
+  animation: call-life 2.2s ease-out forwards;
+  transition: opacity 0.25s ease;
+}
+.firework-call.leaving {
+  opacity: 0 !important;
+}
+.firework-call.v1 {
+  --fill: #ffb703;
+  --shade: #b86e00;
+}
+.firework-call.v2 {
+  --fill: #36b5e8;
+  --shade: #1f6f9c;
+}
+.firework-call.v3 {
+  --fill: #a46bf5;
+  --shade: #5f34a8;
+}
+.firework-call span {
+  display: inline-block;
+  animation: call-letter 0.55s cubic-bezier(0.3, 1.8, 0.5, 1) both,
+    call-wiggle 0.9s ease-in-out 0.55s infinite;
+  animation-delay: calc(var(--i) * 55ms), calc(0.55s + var(--i) * 70ms);
+}
+@keyframes call-life {
+  0% { opacity: 1; margin-top: 0; }
+  70% { opacity: 1; }
+  100% { opacity: 0; margin-top: -34px; }
+}
+@keyframes call-letter {
+  0% { opacity: 0; transform: translateY(26px) scale(0.2) rotate(-25deg); }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+}
+@keyframes call-wiggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-6px) rotate(6deg); }
+}
+
+/* --- Photo shoot --- */
+@media (prefers-reduced-motion: reduce) {
+  .firework-call span {
+    animation: none;
+  }
+}

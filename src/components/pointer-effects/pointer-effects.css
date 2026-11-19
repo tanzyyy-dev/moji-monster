@@ -1,0 +1,70 @@
+@media (hover: hover) and (pointer: fine) {
+  .app,
+  .app button,
+  .app canvas {
+    cursor: none !important;
+  }
+  #magic-cursor {
+    display: block;
+  }
+}
+#magic-cursor {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  line-height: 1;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  will-change: transform;
+}
+#magic-cursor .lucide-icon {
+  width: 29px;
+  height: 29px;
+  filter: drop-shadow(0 0 4px #fff);
+}
+#pointer-fx {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  overflow: hidden;
+}
+.fx-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--fx-color, #f3a1be);
+  transform: translate(-50%, -50%);
+  animation: fx-pop 0.65s ease-out forwards;
+  will-change: transform, opacity;
+}
+.fx-dot.star {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font-size: 17px;
+  line-height: 1;
+}
+@keyframes fx-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--dx, 0px)),
+        calc(-50% + var(--dy, -26px))
+      )
+      scale(0.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-dot {
+    animation-duration: 0.18s;
+  }
+}

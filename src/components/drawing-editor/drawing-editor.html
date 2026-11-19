@@ -1,0 +1,68 @@
+<section class="inline-draw">
+  <div class="drawbox">
+    <canvas id="draw"></canvas>
+    <div class="swipe-hint" aria-live="polite">
+      <img class="lucide-icon" src="./assets/icons/timer.svg" alt="" />
+      <span id="countdown-number">5</span>
+    </div>
+  </div>
+  <div class="draw-controls">
+    <div class="drawing-tools">
+      <div class="color-picker">
+        <button
+          id="color-cycle"
+          class="color-cycle"
+          aria-label="色と描画方法を選ぶ"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="色を選ぶ"
+        ></button>
+        <div id="color-palette" class="color-palette" role="group" aria-label="色" hidden>
+          <div id="palette-colors" class="palette-colors" role="group" aria-label="色"></div>
+        </div>
+      </div>
+      <div class="brush-picker">
+        <button
+          id="brush-cycle"
+          class="secondary brush-cycle"
+          aria-label="描画方法を選ぶ"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="描画方法"
+        >
+          <img class="lucide-icon" src="./assets/icons/pencil.svg" alt="" />
+        </button>
+        <div id="brush-menu" class="brush-menu" role="group" aria-label="描画方法" hidden></div>
+      </div>
+      <div class="asset-picker">
+        <button
+          id="asset-cycle"
+          class="secondary asset-cycle"
+          aria-label="塗り絵や写真を選ぶ"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="絵を選ぶ"
+        >
+          <img class="lucide-icon" src="./assets/icons/image.svg" alt="" />
+        </button>
+        <div
+          id="asset-list"
+          class="asset-list"
+          role="group"
+          aria-label="塗り絵または写真を選ぶ"
+          hidden
+        ></div>
+      </div>
+      <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+      <button
+        id="clear"
+        class="secondary"
+        aria-label="書き直す"
+        title="消しゴム"
+      >
+        <img class="lucide-icon" src="./assets/icons/eraser.svg" alt="" />
+      </button>
+    </div>
+    <button id="finish" class="secondary finish" aria-label="できた">できた</button>
+  </div>
+</section>

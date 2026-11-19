@@ -1,33 +1,30 @@
 # うかべてあそぼ
 
-えをかいて、ふわふわ浮かべてあそぶブラウザーゲームです。インストールやビルドは不要で、静的ファイルだけで動作します。
+えをかいて、ふわふわ浮かべてあそぶブラウザーゲームです。Vite で開発し、ビルドした静的ファイルを配信します。
 
-## 起動方法
+## 開発とプレビュー
 
-リポジトリのルートでローカルサーバーを起動します。
-
-```sh
-python3 -m http.server 8000
-```
-
-ブラウザーで <http://localhost:8000> を開いてください。BGMはブラウザーの自動再生制限に合わせ、最初の操作後に再生します。
-
-### LAN経由の実機確認（iPhone / iPad）
-
-同一LAN上の開発PCへiPhone・iPadからアクセスする場合は、Pythonベースの起動スクリプトを使います。バインド先は `0.0.0.0` で、起動時にアクセス可能なURLを表示します。
+Node.js 22.12 以上を推奨します（20 系は 20.19 以上）。
 
 ```sh
-python3 serve.py 8000
+npm ci
+npm run dev
 ```
 
-表示例:
+Vite が表示したローカルURLを開いてください。BGMは最初の操作後に再生します。同一LAN上の iPhone や iPad で開く場合は `npm run serve` で起動し、表示された Network URL を使います。
 
-```text
-Local:   http://localhost:8000
-Network: http://192.168.1.100:8000
+```sh
+npm run build
+npm run preview
 ```
 
-表示された `Network:` のURLをiPhone / iPadのSafariで開いてください。外部公開やポートフォワーディングは行いません。
+ビルド結果は `dist/` に出力されます。Pythonで静的配信を再現する場合は `python3 -m http.server 8000 --directory dist` を実行します。
+
+## 公開
+
+静的ホストの公開ディレクトリに `dist/` の中身を配置します。Vite の相対ベース `./` により、ドメイン直下とサブパスの両方で同じ成果物を配れます。
+
+GitHub Pages では、リポジトリの Settings → Pages → Build and deployment → Source を **GitHub Actions** に設定します。以降は `main` への push または Actions からの手動実行で、`.github/workflows/pages.yml` がテスト・ビルドし、`dist/` を公開します。
 
 ## あそびかた
 
@@ -37,28 +34,18 @@ Network: http://192.168.1.100:8000
 - 爆弾ボタンを押してキャラクターを選ぶと、10秒後に弾けます。
 - カメラボタンで画面を画像として保存し、戻る矢印で最初から遊べます。
 
-## ディレクトリ
+## コードの入口
 
-```text
-.
-├── assets/
-│   ├── audio/       BGM
-│   └── favicon.svg  空に浮かぶ絵と文字のアイコン
-├── docs/            素材の出典と記録
-├── src/             ゲームのJavaScript
-├── styles/          ゲームのCSS
-└── index.html       ページのHTML
-```
+`index.html` が画面の配置を定義し、`src/main.js` が機能の初期化と接続を行います。機能を変更するときは `src/components/` 内の該当ディレクトリから確認してください。[責務と公開API](docs/COMPONENTS.md)
 
 ## テスト
 
-Node.js標準の `node:test` を使った回帰テストを実行できます（外部依存はありません）。
-
 ```sh
-node --test
+npm test
+npm run build
 ```
 
-テストは `tests/` 以下にあり、ダブルタップズーム抑止と既存のピンチズーム抑止の判定・イベント登録処理を検証します。
+Node.js の標準テストでブラウザーの拡大操作を抑止する処理と描画面の等比配置を検証します。既存の Python 静的サーバーのテストも同じコマンドで実行されるため、テストには Python 3 が必要です。
 
 ## 音源
 
