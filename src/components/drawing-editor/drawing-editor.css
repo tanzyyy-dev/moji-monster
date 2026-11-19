@@ -1,141 +1,199 @@
-.bottom {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  padding: 6px 10px max(9px, env(safe-area-inset-bottom));
-  z-index: 6;
+#drawing-editor {
+  display: contents;
 }
-.secondary {
+
+.pictorial-tool,
+.color-cycle {
+  display: grid;
+  place-items: center;
+  width: var(--editor-tool-size, 44px);
+  height: var(--editor-tool-size, 44px);
+  padding: 0;
+  border-radius: 13px;
+  border: 2px solid #5b493d;
+  color: #5b493d;
   background: #fff9e9;
-  border: 3px solid #5b493d;
-  border-radius: 20px;
-  padding: 14px 18px;
-  font-weight: 900;
-  box-shadow: 0 5px #c9bba4;
+  -webkit-tap-highlight-color: transparent;
 }
-.secondary:active {
-  transform: translateY(3px);
-  box-shadow: none;
+.pictorial-tool svg,
+.pictorial-tool .lucide-icon {
+  display: block;
+  width: var(--editor-icon-size, 26px);
+  height: var(--editor-icon-size, 26px);
+}
+.pictorial-tool svg,
+.brush-option svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pictorial-tool:disabled,
+.color-cycle:disabled,
+.finish:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.editor-mode {
+  grid-area: tools;
+  place-self: center;
+  margin-block-start: max(0px, calc(env(safe-area-inset-top) - 5px));
+  z-index: 4;
+  background: #ffdb92;
+  box-shadow: 0 3px #c8b9a1;
+}
+.editor-mode .mode-pencil,
+.editor-mode .mode-half,
+.editor-mode .mode-full,
+#drawing-editor[data-mode="minimized"] .mode-window,
+#drawing-panel[hidden] {
+  display: none;
+}
+.editor-mode .mode-half,
+.editor-mode .mode-full {
+  fill: currentColor;
+  stroke: none;
+}
+#drawing-editor[data-mode="minimized"] .mode-pencil,
+#drawing-editor[data-mode="half"] .mode-bottom,
+#drawing-editor[data-mode="full"] .mode-full {
+  display: block;
+}
+
+.inline-draw {
+  grid-area: play;
+  align-self: end;
+  justify-self: end;
+  display: grid;
+  grid-template:
+    "style repair" auto
+    "paper paper" minmax(0, 1fr)
+    "tools finish" auto
+    / minmax(max-content, 1fr) minmax(0, 132px);
+  gap: 8px;
+  width: calc(100% - 2 * var(--editor-edge));
+  height: calc(50% - var(--editor-bottom));
+  margin: 0 var(--editor-edge) var(--editor-bottom) 0;
+  padding: 8px;
+  border: 2px solid #755c48b8;
+  border-radius: 20px;
+  background: rgb(255 250 240 / 26%);
+  box-shadow: 0 3px 0 #6f51401f;
+  z-index: 3;
+  --editor-edge: max(8px, env(safe-area-inset-left), env(safe-area-inset-right));
+  --editor-bottom: max(8px, env(safe-area-inset-bottom));
+}
+#drawing-editor[data-mode="full"] .inline-draw {
+  height: calc(100% - var(--editor-bottom) - 6px);
+}
+@media (orientation: landscape) {
+  #drawing-editor[data-mode="half"] .mode-bottom { display: none; }
+  #drawing-editor[data-mode="half"] .mode-right { display: block; }
+  #drawing-editor[data-mode="half"] .inline-draw {
+    width: calc(50% - var(--editor-edge));
+    height: calc(100% - var(--editor-bottom) - 6px);
+  }
+}
+/* Free vertical space for the canvas in short landscape viewports. */
+@media (orientation: landscape) and (max-height: 460px) {
+  .inline-draw {
+    --editor-tool-size: 32px;
+    --editor-icon-size: 21px;
+    --editor-group-padding: 2px;
+    gap: 4px;
+    padding: 4px;
+  }
+}
+@media (max-width: 350px) {
+  .inline-draw {
+    --editor-tool-size: 40px;
+    --editor-icon-size: 24px;
+  }
+}
+
+.paper-space {
+  grid-area: paper;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  container-type: size;
 }
 .drawbox {
   position: relative;
-  background: #fff;
-  border: 3px dashed #d7cbb8;
-  border-radius: 22px;
-  overflow: hidden;
-  aspect-ratio: 1.25;
-}
-#draw {
   width: 100%;
   height: 100%;
+  /* Keep the usable paper between 3:4 and 3:2, even on a wide monitor. */
+  max-width: calc(150cqh - 2px);
+  max-height: calc((100cqw - 4px) * 4 / 3 + 4px);
+  background: rgb(77 92 102 / 45%);
+  border: 2px dashed #ab9173bc;
+  border-radius: 13px;
+  overflow: hidden;
+}
+#draw {
   display: block;
+  width: 100%;
+  height: 100%;
   touch-action: none;
   cursor: crosshair;
 }
-.inline-draw {
-  width: min(100%, 460px);
-  background: #fffaf0;
-  border: 2px solid #655448;
-  border-radius: 21px;
-  padding: 8px 10px 9px;
-  box-shadow: 0 3px 0 #b9ad94;
-}
-.inline-draw .drawbox {
-  height: clamp(115px, 22dvh, 180px);
-  aspect-ratio: auto;
-  border-width: 2px;
-  border-radius: 13px;
-}
-.inline-draw .draw-controls {
+
+.style-tools,
+.drawing-tools,
+.repair-tools {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 7px;
+  gap: 5px;
+  padding: var(--editor-group-padding, 4px);
+  border-radius: 15px;
+  background: rgb(255 250 240 / 74%);
 }
-.inline-draw .secondary {
-  padding: 7px 11px;
-  border-width: 2px;
-  border-radius: 12px;
-  font-size: 20px;
-  box-shadow: none;
+.style-tools {
+  grid-area: style;
+  justify-self: start;
 }
-.inline-draw .draw-controls {
-  gap: 9px;
+.toggle-tool[aria-pressed="true"] {
+  background: #ffdb92;
+  box-shadow: inset 0 0 0 1px #5b493d;
 }
-.inline-draw .color-cycle {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
+#face-toggle[aria-pressed="true"] .eyes-off {
+  display: none;
+}
+.drawing-tools {
+  grid-area: tools;
+  justify-self: start;
+}
+.repair-tools {
+  grid-area: repair;
+  justify-self: end;
+}
+.color-cycle {
   border: 3px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px #5b493d;
-  cursor: pointer;
+  box-shadow: 0 0 0 1px #5b493d;
+  -webkit-touch-callout: none;
 }
-.inline-draw .secondary {
-  min-height: 46px;
-  font-size: 17px;
+.finish {
+  grid-area: finish;
+  align-self: center;
+  justify-self: end;
+  width: min(132px, 100%);
+  min-height: var(--editor-tool-size, 44px);
+  padding: 4px 10px;
+  border: 2px solid #885327;
+  border-radius: 15px;
+  background: #ffb84c;
+  box-shadow: 0 3px #b87831;
+  color: #513016;
+  font-weight: 1000;
 }
-.inline-draw {
-  padding-top: 9px;
+.finish:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px #b87831;
 }
-@media (max-width: 350px) {
-  .inline-draw .draw-controls {
-    gap: 6px;
-  }
-  .inline-draw .color-cycle {
-    width: 42px;
-    height: 42px;
-    min-width: 42px;
-  }
-}
-.inline-draw .secondary[aria-label="書き直す"] {
-  font-size: 21px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 46px;
-  padding: 7px;
-}
-.inline-draw .secondary[aria-label="書き直す"] .lucide-icon {
-  display: block;
-  width: 29px;
-  height: 29px;
-}
-.inline-draw .drawbox {
-  position: relative;
-}
-.swipe-hint {
-  position: absolute;
-  right: 8px;
-  bottom: 7px;
-  font-size: 12px;
-  font-weight: 800;
-  background: #fff9e9cf;
-  border-radius: 12px;
-  padding: 4px 8px;
-  pointer-events: none;
-  color: #6a5c4e;
-}
-.swipe-hint .lucide-icon {
-  width: 26px;
-  height: 26px;
-}
-.inline-draw .draw-controls {
-  justify-content: space-between;
-}
-.swipe-hint {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.drawbox.waiting .swipe-hint {
-  opacity: 1;
-}
-.color-picker {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
+
 .color-palette[hidden],
 .brush-menu[hidden],
 .asset-list[hidden] {
@@ -149,8 +207,10 @@
   left: 0;
   bottom: auto;
   max-height: calc(100dvh - 16px);
-  overflow: auto;
-  overscroll-behavior: contain;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   z-index: 20;
 }
 .color-palette {
@@ -181,30 +241,9 @@
   outline: 3px solid #4d4037;
   outline-offset: 2px;
 }
-.color-cycle {
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
 .brush-picker {
   position: relative;
   flex-shrink: 0;
-}
-.brush-cycle {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  padding: 6px !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-}
-.brush-cycle .lucide-icon {
-  width: 26px;
-  height: 26px;
 }
 .brush-menu {
   width: min(196px, calc(100vw - 16px));
@@ -232,42 +271,19 @@
   background: #fff2d9;
   outline: 2px solid #f49a59;
 }
-.brush-option .lucide-icon {
+.brush-option svg {
   width: 25px;
   height: 25px;
-}
-.color-palette,
-.brush-menu,
-.asset-list {
-  touch-action: pan-y;
 }
 .asset-picker {
   position: relative;
   flex-shrink: 0;
 }
-.asset-cycle {
-  width: 46px;
-  min-width: 46px;
-  height: 46px;
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px !important;
-}
-.asset-cycle .lucide-icon {
-  width: 28px;
-  height: 28px;
-  display: block;
-  flex-shrink: 0;
-}
-.asset-list[hidden] {
-  display: none !important;
-}
 .asset-list {
   width: min(310px, calc(100vw - 16px));
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
   gap: 7px;
   padding: 10px;
   background: #fffaf0;
@@ -276,8 +292,7 @@
   box-shadow: 0 5px #c8b9a1;
   z-index: 20;
 }
-.template-option,
-.asset-upload-option {
+.template-option {
   background: white;
   border: 2px solid #d4c7b3;
   border-radius: 12px;
@@ -294,6 +309,7 @@
 }
 .template-option img {
   width: 58px;
+  max-width: 100%;
   height: 49px;
   object-fit: contain;
 }
@@ -301,236 +317,30 @@
   border-color: #f49a59;
   background: #fff2d9;
 }
-.asset-upload-option .lucide-icon {
-  width: 43px;
-  height: 43px;
-}
-.asset-cycle {
-  touch-action: manipulation;
-  -webkit-touch-callout: none;
-  user-select: none;
-}
-.inline-draw .draw-controls .asset-cycle {
-  flex: 0 0 46px !important;
-  width: 46px;
-  min-width: 46px;
-  height: 46px;
-  min-height: 46px;
-  padding: 6px !important;
+.swipe-hint { display: none; }
+.drawbox.waiting .swipe-hint {
+  position: absolute;
+  top: 9px;
+  right: 10px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-}
-.inline-draw .draw-controls .asset-cycle .lucide-icon {
-  display: block;
-  flex-shrink: 0;
-}
-@media (max-width: 350px) {
-  .inline-draw .draw-controls .asset-cycle {
-    flex-basis: 42px !important;
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    min-height: 42px;
-  }
-}
-.inline-draw .draw-controls .finish {
-  flex: 1;
-  min-width: 72px;
-  min-height: 46px;
-  padding: 7px 9px;
-  background: #ffce79;
-  border-color: #a16a42;
-  color: #5d3b27;
-  font-size: clamp(13px, 3.7vw, 17px);
-  font-weight: 900;
-  white-space: nowrap;
-}
-.inline-draw .draw-controls .finish:disabled {
-  opacity: 0.65;
-}
-.inline-draw .drawbox.waiting .swipe-hint {
-  display: block;
-  background: #fff3c7;
-  color: #80532b;
-  font-size: 19px;
-  left: 50%;
-  right: auto;
-  bottom: 50%;
-  transform: translate(-50%, 50%);
-  padding: 8px 16px;
-  border: 2px solid #e7b45d;
-}
-.inline-draw .swipe-hint {
-  display: none;
-}
-@media (max-width: 380px) {
-  .inline-draw .draw-controls {
-    gap: 5px;
-  }
-  .inline-draw .draw-controls .finish {
-    min-width: 65px;
-    padding: 5px 6px;
-  }
-  .inline-draw .draw-controls .color-cycle,
-  .inline-draw .draw-controls .brush-cycle,
-  .inline-draw .draw-controls .asset-cycle {
-    width: 40px;
-    min-width: 40px;
-    height: 42px;
-    min-height: 42px;
-  }
-}
-/* Keep drawing tools compact and separate the primary action. */
-.inline-draw .draw-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 9px;
-}
-.inline-draw .drawing-tools {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-.inline-draw .drawing-tools > .secondary,
-.inline-draw .drawing-tools > .brush-picker,
-.inline-draw .drawing-tools > .asset-picker,
-.inline-draw .drawing-tools > .color-picker {
-  flex-shrink: 0;
-}
-.inline-draw .drawing-tools #clear {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  padding: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.inline-draw .drawing-tools .color-cycle,
-.inline-draw .drawing-tools .brush-cycle,
-.inline-draw .drawing-tools .asset-cycle {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-}
-.inline-draw .draw-controls .finish {
-  margin-left: auto;
-  flex: 1 1 90px;
-  min-width: 82px;
-  max-width: 132px;
-  min-height: 48px;
-  background: #ffb84c;
-  border: 2px solid #885327;
-  border-radius: 15px;
-  box-shadow: 0 3px 0 #b87831;
-  color: #513016;
-  font-size: 17px;
-  font-weight: 1000;
-  letter-spacing: 0.01em;
-}
-.inline-draw .draw-controls .finish:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #b87831;
-}
-.inline-draw .drawbox.waiting .swipe-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  left: 50%;
-  right: auto;
-  bottom: 50%;
-  transform: translate(-50%, 50%);
-  background: #fffaf1f2;
-  color: #604333;
+  gap: 5px;
+  padding: 5px 9px;
   border: 2px solid #e3b977;
-  border-radius: 18px;
-  min-width: 100px;
-  padding: 12px 18px;
-  box-shadow: 0 4px 0 #d5b68b;
-  pointer-events: none;
-}
-.inline-draw .drawbox.waiting .swipe-hint span {
-  font-size: 36px;
+  border-radius: 13px;
+  background: #fffaf0e8;
+  box-shadow: 0 2px #d5b68b;
+  color: #604333;
+  font-size: 23px;
   font-weight: 1000;
   line-height: 1;
-  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
-.inline-draw .drawbox.waiting .swipe-hint .lucide-icon {
-  width: 27px;
-  height: 27px;
+.swipe-hint .lucide-icon {
+  width: 20px;
+  height: 20px;
 }
-@media (max-width: 400px) {
-  .inline-draw .draw-controls {
-    gap: 7px;
-  }
-  .inline-draw .drawing-tools {
-    gap: 5px;
-  }
-  .inline-draw .drawing-tools #clear,
-  .inline-draw .drawing-tools .color-cycle,
-  .inline-draw .drawing-tools .brush-cycle,
-  .inline-draw .drawing-tools .asset-cycle {
-    width: 39px;
-    min-width: 39px;
-    height: 42px;
-    min-height: 42px;
-  }
-  .inline-draw .draw-controls .finish {
-    min-width: 75px;
-    padding: 7px 5px;
-    font-size: 15px;
-  }
-}
-@media (max-width: 350px) {
-  .inline-draw {
-    padding-left: 7px;
-    padding-right: 7px;
-  }
-  .inline-draw .drawing-tools {
-    gap: 4px;
-  }
-  .inline-draw .drawing-tools #clear,
-  .inline-draw .drawing-tools .color-cycle,
-  .inline-draw .drawing-tools .brush-cycle,
-  .inline-draw .drawing-tools .asset-cycle {
-    width: 36px;
-    min-width: 36px;
-    height: 40px;
-    min-height: 40px;
-  }
-  .inline-draw .draw-controls .finish {
-    min-width: 69px;
-    font-size: 14px;
-  }
-}
-.inline-draw .drawbox.waiting .swipe-hint {
-  left: auto !important;
-  right: 10px !important;
-  top: 9px !important;
-  bottom: auto !important;
-  transform: none !important;
-  min-width: 0 !important;
-  padding: 5px 9px !important;
-  gap: 5px !important;
-  border-radius: 13px !important;
-  background: #fffaf0e8 !important;
-  box-shadow: 0 2px 0 #d5b68b !important;
-}
-.inline-draw .drawbox.waiting .swipe-hint span {
-  font-size: 23px !important;
-}
-.inline-draw .drawbox.waiting .swipe-hint .lucide-icon {
-  width: 20px !important;
-  height: 20px !important;
-}
+.inline-draw.locked #draw { pointer-events: none; }
 
 /* --- Floating picture during the countdown --- */
 .inline-draw .drawbox #draw {
@@ -556,14 +366,4 @@
 .float-ghost.dropped {
   opacity: 0;
   transition-duration: 0.18s;
-}
-
-/* --- Fireworks calls --- */
-/* --- Drawing area locked during the float countdown --- */
-.inline-draw.locked #draw {
-  pointer-events: none;
-}
-.inline-draw.locked .drawing-tools button:disabled {
-  opacity: 0.45;
-  cursor: default;
 }

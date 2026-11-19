@@ -23,8 +23,11 @@ button {
 }
 .app {
   height: 100dvh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template:
+    "tools" auto
+    "play" minmax(0, 1fr)
+    / minmax(0, 1fr);
   background: linear-gradient(
     #bfeaf4 0%,
     #f2f8e9 69%,

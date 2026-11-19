@@ -7,13 +7,13 @@ import { drawBackground, drawRain, drawWind } from "./background.js";
 import { baseCharacterRadius, characterDisplayScale, drawCharacter } from "./character-art.js";
 import { drawBombCountdown, fireworkCall, fireworkCallText, fireworksBurst, fireworkShapes, updateParticles } from "./effects.js";
 
-export function createPlayground(root, { app, topbar, audio, sparkle, onPresentationStart }) {
+export function createPlayground(root, { app, topbar, audio, sparkle, onPresentationStart, onBombPress, onFireworksChange }) {
   root.innerHTML = markup;
   topbar.innerHTML = withIconUrls(toolsMarkup);
   const $ = (id) => root.querySelector(`#${id}`) ?? topbar.querySelector(`#${id}`);
   const world = $("world"), wc = world.getContext("2d");
   const fireworkCalls = $("firework-calls");
-  const { startBgm, soundFloat, soundTick, soundExplosion, soundRocket, soundBurst, soundCheer, soundPhotoCue } = audio;
+  const { soundFloat, soundTick, soundExplosion, soundRocket, soundBurst, soundCheer, soundPhotoCue } = audio;
 
   const monsters = [];
   let w = 0,
@@ -223,32 +223,33 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   }
   function addArtwork(artwork, landing) {
     if (isPlaygroundBusy()) return false;
-    let m;
-    if (artwork.image) {
-      m = { image: artwork.image };
-    } else {
-      const { bounds: b, color } = artwork;
-      const displayScale = characterDisplayScale(w, h),
-        size = Math.min(90, Math.max(55, w * 0.16)) * displayScale,
-        unit = size / Math.max(b.width, b.height),
-        cx = (b.minX + b.maxX) / 2,
-        cy = (b.minY + b.maxY) / 2;
-      const paths = artwork.paths.map(({ points, color, scale }) => {
-        const path = points.map((q) => ({
-          x: (q.x - cx) * unit,
-          y: (q.y - cy) * unit,
-        }));
-        path.inkColor = color;
-        path.brushScale = scale * unit;
-        return path;
-      });
-      m = {
-        paths,
-        color,
+    const m = artwork.image ? { image: artwork.image } : {};
+    if (!artwork.image || artwork.handDrawn) {
+      const width = artwork.image?.width ?? artwork.bounds.width;
+      const height = artwork.image?.height ?? artwork.bounds.height;
+      const displayScale = characterDisplayScale(w, h);
+      const size = Math.min(90, Math.max(55, w * 0.16)) * displayScale;
+      const unit = size / Math.max(width, height);
+      Object.assign(m, {
         size,
-        faceY: -Math.min(12, b.height * unit * 0.18),
-        eyeOffset: Math.min(14, b.width * unit * 0.17),
-      };
+        withFace: artwork.withFace,
+        faceY: -Math.min(12, height * unit * 0.18),
+        eyeOffset: Math.min(14, width * unit * 0.17),
+      });
+      if (!artwork.image) {
+        const b = artwork.bounds;
+        const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+        m.color = artwork.color;
+        m.paths = artwork.paths.map(({ points, color, scale }) => {
+          const path = points.map((q) => ({
+            x: (q.x - cx) * unit,
+            y: (q.y - cy) * unit,
+          }));
+          path.inkColor = color;
+          path.brushScale = scale * unit;
+          return path;
+        });
+      }
     }
     Object.assign(m, {
       x: landing
@@ -290,7 +291,10 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     );
     world.style.cursor = bombMode ? "crosshair" : "default";
   }
-  $("bomb").onclick = () => setBombMode(!bombMode);
+  $("bomb").onclick = () => {
+    setBombMode(!bombMode);
+    onBombPress();
+  };
   function updateTopButtons() {
     // Top tools only make sense while at least one character is floating.
     const empty = monsters.length === 0,
@@ -299,12 +303,12 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     for (const [id, off] of [
       ["photo", empty || busy],
       ["fireworks", empty || busy],
-      ["bomb", empty || photoInProgress],
+      ["bomb", empty || busy],
     ])
       if ($(id).disabled !== off) $(id).disabled = off;
   }
   world.addEventListener("pointerdown", (e) => {
-    if (photoInProgress || (fireworksInProgress && !bombMode)) return;
+    if (isPlaygroundBusy()) return;
     if (e.button !== 0) return;
     const point = worldPoint(e),
       m = characterAt(point.x, point.y);
@@ -572,8 +576,7 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     tick += dt;
-    if (fireworksInProgress) {
-      dayReturnAt = 0;
+    if (fireworksInProgress && !dayReturnAt) {
       nightProgress = Math.min(1, nightProgress + dt / 3.2);
     } else if (randomEventInProgress && randomEventType === "night") {
       dayReturnAt = 0;
@@ -599,16 +602,22 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
     }
     updateParticles(wc, particles, dt);
     skyFlash = Math.max(0, skyFlash - dt * 2.4);
-    if (!fireworksInProgress && dayReturnAt && now >= dayReturnAt) {
+    if (dayReturnAt && now >= dayReturnAt) {
       nightProgress = Math.max(0, nightProgress - dt / 3);
-      if (nightProgress <= 0) dayReturnAt = 0;
+      if (nightProgress <= 0) {
+        dayReturnAt = 0;
+        if (fireworksInProgress) {
+          fireworksInProgress = false;
+          onFireworksChange(false);
+        }
+      }
     }
     if (
       fireworksInProgress &&
+      !dayReturnAt &&
       nightProgress >= 1 &&
       monsters.every((m) => !m.fireworkAt)
     ) {
-      fireworksInProgress = false;
       dayReturnAt = now + 2200;
     }
     if (randomEventInProgress && (monsters.length === 0 || now >= randomEventEnd))
@@ -705,8 +714,10 @@ export function createPlayground(root, { app, topbar, audio, sparkle, onPresenta
   }
   function startFireworks() {
     if (photoInProgress || fireworksInProgress || randomEventInProgress) return;
-    onPresentationStart();
     fireworksInProgress = true;
+    dayReturnAt = 0;
+    onFireworksChange(true);
+    updateTopButtons();
     fireworksStartedAt = performance.now();
     if (grabbedMonster) releaseGrab(null, false);
     monsters.forEach((m, index) => {

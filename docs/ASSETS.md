@@ -15,4 +15,6 @@ GoogleのGeminiヘルプでは、Geminiで音楽を生成してMP3として保�
 
 ## ゲーム内の画像
 
-塗り絵テンプレートは`src/components/drawing-editor/templates.js` にSVGとして定義しています。写真ボタンで読み込んだ画像は、プレイヤーが選択したファイルです。
+塗り絵テンプレートと基本図形は `src/components/drawing-editor/templates.js` にSVGとして定義しています。画像の絵柄から読み込んだ画像は、プレイヤーが選択したファイルです。
+
+インターフェースで使う Lucide の SVG とライセンスは `assets/icons/` にあります。用紙の表示切替、ペンの太さ、目玉、塗り絵、取り消し、全消去の絵柄は、描画エディタ内の独自 SVG です。

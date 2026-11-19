@@ -1,5 +1,5 @@
 .topbar {
-  flex: 0 0 calc(56px + env(safe-area-inset-top));
+  grid-area: tools;
   min-height: calc(56px + env(safe-area-inset-top));
   width: 100%;
   display: flex;
@@ -12,7 +12,7 @@
   z-index: 4;
 }
 .world {
-  flex: 1;
+  grid-area: play;
   min-height: 0;
   position: relative;
 }

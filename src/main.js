@@ -12,6 +12,8 @@ const playground = createPlayground(document.querySelector("#playground"), {
   audio,
   sparkle,
   onPresentationStart: () => editor.cancelFloat(),
+  onBombPress: () => editor.minimize(),
+  onFireworksChange: (active) => editor.setFireworksActive(active),
 });
 const editor = createDrawingEditor(document.querySelector("#drawing-editor"), {
   audio,

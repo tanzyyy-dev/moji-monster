@@ -5,7 +5,7 @@ export function characterDisplayScale(w, h) {
 }
 
 export function baseCharacterRadius(m, w, h) {
-  if (m.image) {
+  if (m.image && !m.size) {
     const scale = Math.min(
       Math.min(160, w * 0.4) / m.image.width,
       Math.min(170, h * 0.34) / m.image.height,
@@ -124,11 +124,14 @@ export function drawCharacter(ctx, m, t, grabbed, w, h) {
   if (m.image) {
     const iw = m.image.width,
       ih = m.image.height,
-      scale = Math.min(
-        Math.min(160, w * 0.4) / iw,
-        Math.min(170, h * 0.34) / ih,
-      ) * characterDisplayScale(w, h);
-    if (action === "sleep") ctx.rotate(0.32);
+      scale = m.size
+        ? m.size / Math.max(iw, ih)
+        : Math.min(
+          Math.min(160, w * 0.4) / iw,
+          Math.min(170, h * 0.34) / ih,
+        ) * characterDisplayScale(w, h);
+    if (!m.size && action === "sleep") ctx.rotate(0.32);
+    if (m.withFace === true) drawFeet(ctx, m, t);
     ctx.drawImage(
       m.image,
       (-iw * scale) / 2,
@@ -136,10 +139,20 @@ export function drawCharacter(ctx, m, t, grabbed, w, h) {
       iw * scale,
       ih * scale,
     );
+    if (m.withFace === true) drawFace(ctx, m, t, action, dancing);
     drawActionEffects(ctx, m, t, action, w, h);
     ctx.restore();
     return;
   }
+  if (m.withFace !== false) drawFeet(ctx, m, t);
+  for (const path of m.paths)
+    ink(ctx, [path], path.inkColor || m.color, path.brushScale || 1);
+  if (m.withFace !== false) drawFace(ctx, m, t, action, dancing);
+  drawActionEffects(ctx, m, t, action, w, h);
+  ctx.restore();
+}
+
+function drawFeet(ctx, m, t) {
   ctx.strokeStyle = "#51443e";
   ctx.lineWidth = 5;
   ctx.lineCap = "round";
@@ -155,8 +168,9 @@ export function drawCharacter(ctx, m, t, grabbed, w, h) {
     );
     ctx.stroke();
   }
-  for (const path of m.paths)
-    ink(ctx, [path], path.inkColor || m.color, path.brushScale || 1);
+}
+
+function drawFace(ctx, m, t, action, dancing) {
   const fy = m.faceY;
   if (action === "sleep") {
     ctx.strokeStyle = "#55453f";
@@ -238,6 +252,4 @@ export function drawCharacter(ctx, m, t, grabbed, w, h) {
     ctx.arc(0, fy + 15, 5, 0, Math.PI);
     ctx.stroke();
   }
-  drawActionEffects(ctx, m, t, action, w, h);
-  ctx.restore();
 }

@@ -5,7 +5,7 @@ export function floodFillCanvas(
   x,
   y,
   fillColor,
-  { templateOnly = false, allowedColors = [] } = {},
+  { templateOnly = false, allowedColors = [], paintLayer = canvas } = {},
 ) {
   const width = canvas.width,
     height = canvas.height;
@@ -60,6 +60,11 @@ export function floodFillCanvas(
       Math.abs(pixels[offset + 2] - target[2]) <= tolerance
     );
   };
+  // Match against the visible composite, but write only to the editable layer.
+  const separateLayer = paintLayer !== canvas;
+  const paintCtx = separateLayer ? paintLayer.getContext("2d", { willReadFrequently: true }) : ctx;
+  const paintData = separateLayer ? paintCtx.getImageData(0, 0, width, height) : imageData;
+  const paint = paintData.data;
   let head = 0,
     tail = 0,
     changed = 0;
@@ -75,10 +80,10 @@ export function floodFillCanvas(
     const index = queue[head++];
     if (!matches(index)) continue;
     const offset = index * 4;
-    pixels[offset] = fill[0];
-    pixels[offset + 1] = fill[1];
-    pixels[offset + 2] = fill[2];
-    if (transparentTarget) pixels[offset + 3] = 255;
+    paint[offset] = fill[0];
+    paint[offset + 1] = fill[1];
+    paint[offset + 2] = fill[2];
+    if (separateLayer || transparentTarget) paint[offset + 3] = 255;
     changed++;
     const px = index % width;
     if (px > 0) enqueue(index - 1);
@@ -87,6 +92,6 @@ export function floodFillCanvas(
     if (index < width * (height - 1)) enqueue(index + width);
   }
   if (!changed) return false;
-  ctx.putImageData(imageData, 0, 0);
+  paintCtx.putImageData(paintData, 0, 0);
   return true;
 }
