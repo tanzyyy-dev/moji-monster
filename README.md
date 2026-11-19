@@ -12,6 +12,23 @@ python3 -m http.server 8000
 
 ブラウザーで <http://localhost:8000> を開いてください。BGMはブラウザーの自動再生制限に合わせ、最初の操作後に再生します。
 
+### LAN経由の実機確認（iPhone / iPad）
+
+同一LAN上の開発PCへiPhone・iPadからアクセスする場合は、Pythonベースの起動スクリプトを使います。バインド先は `0.0.0.0` で、起動時にアクセス可能なURLを表示します。
+
+```sh
+python3 serve.py 8000
+```
+
+表示例:
+
+```text
+Local:   http://localhost:8000
+Network: http://192.168.1.100:8000
+```
+
+表示された `Network:` のURLをiPhone / iPadのSafariで開いてください。外部公開やポートフォワーディングは行いません。
+
 ## あそびかた
 
 - 画面下のキャンバスに絵をかき、色や塗り絵テンプレートを選べます。
@@ -32,6 +49,16 @@ python3 -m http.server 8000
 ├── styles/          ゲームのCSS
 └── index.html       ページのHTML
 ```
+
+## テスト
+
+Node.js標準の `node:test` を使った回帰テストを実行できます（外部依存はありません）。
+
+```sh
+node --test
+```
+
+テストは `tests/` 以下にあり、ダブルタップズーム抑止と既存のピンチズーム抑止の判定・イベント登録処理を検証します。
 
 ## 音源
 

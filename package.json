@@ -1,0 +1,8 @@
+{
+  "name": "ukabete-asobo",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 serve.py 8000"
+  }
+}

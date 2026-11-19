@@ -11,24 +11,21 @@
   document.addEventListener("selectstart", (e) => {
     if (!e.target.closest("input")) e.preventDefault();
   });
-  // Pinch zoom would break the full-screen play area: block Safari's gesture
-  // events, trackpad pinch (ctrl+wheel) and any two-finger touch zoom fallback.
-  for (const type of ["gesturestart", "gesturechange", "gestureend"])
-    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
-  document.addEventListener(
-    "wheel",
-    (e) => {
-      if (e.ctrlKey) e.preventDefault();
-    },
-    { passive: false },
-  );
-  document.addEventListener(
-    "touchmove",
-    (e) => {
-      if (e.touches.length > 1) e.preventDefault();
-    },
-    { passive: false },
-  );
+  // Pinch/double-tap zoom guards: Safari gesture events, trackpad pinch
+  // (ctrl+wheel), two-finger touch zoom fallback, and Safari double-tap
+  // (Smart Zoom) on the play/drawing canvases.
+  const zoomGuard =
+    (typeof globalThis !== "undefined" && globalThis.UkabeteZoomGuard) || {};
+  if (typeof zoomGuard.installSafariPinchZoomBlocker === "function")
+    zoomGuard.installSafariPinchZoomBlocker(document);
+  if (typeof zoomGuard.installCtrlWheelZoomBlocker === "function")
+    zoomGuard.installCtrlWheelZoomBlocker(document);
+  if (typeof zoomGuard.installTouchMovePinchBlocker === "function")
+    zoomGuard.installTouchMovePinchBlocker(document);
+  if (typeof zoomGuard.installDoubleTapZoomBlocker === "function") {
+    zoomGuard.installDoubleTapZoomBlocker(world);
+    zoomGuard.installDoubleTapZoomBlocker(draw);
+  }
   const magicCursor = $("magic-cursor"),
     pointerFx = $("pointer-fx");
   const finePointer = matchMedia("(hover:hover) and (pointer:fine)");
